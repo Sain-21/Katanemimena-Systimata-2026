@@ -1,4 +1,4 @@
-package Shared.src.com.aueb.shared;
+package com.aueb.shared;
 
 import java.io.Serializable;
 
