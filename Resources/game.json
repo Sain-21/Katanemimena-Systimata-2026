@@ -1,0 +1,68 @@
+[
+  {
+    "gameName": "Book of Dead",
+    "provider": "Play'n GO",
+    "reels": 5,
+    "maxWin": 5000,
+    "imageUrl": "book.png",
+    "minBet": 0.10,
+    "maxBet": 100.0,
+    "volatility": "High",
+    "gameHash": "hash1"
+  },
+  {
+    "gameName": "Starburst",
+    "provider": "NetEnt",
+    "reels": 5,
+    "maxWin": 500,
+    "imageUrl": "star.png",
+    "minBet": 0.10,
+    "maxBet": 100.0,
+    "volatility": "Low",
+    "gameHash": "hash2"
+  },
+  {
+    "gameName": "Gonzo's Quest",
+    "provider": "NetEnt",
+    "reels": 5,
+    "maxWin": 2500,
+    "imageUrl": "gonzo.png",
+    "minBet": 0.20,
+    "maxBet": 50.0,
+    "volatility": "Medium",
+    "gameHash": "hash3"
+  },
+  {
+    "gameName": "Tome of Madness",
+    "provider": "Play'n GO",
+    "reels": 5,
+    "maxWin": 2000,
+    "imageUrl": "tome.png",
+    "minBet": 0.10,
+    "maxBet": 100.0,
+    "volatility": "High",
+    "gameHash": "hash4"
+  },
+  {
+    "gameName": "Zeus",
+    "provider": "WMS",
+    "reels": 5,
+    "maxWin": 500,
+    "imageUrl": "zeus.png",
+    "minBet": 0.30,
+    "maxBet": 150.0,
+    "volatility": "Medium",
+    "gameHash": "hash5"
+  },
+  {
+    "gameName": "Gates of Olympus",
+    "provider": "Pragmatic",
+    "reels": 6,
+    "maxWin": 5000,
+    "imageUrl": "gates.png",
+    "minBet": 0.20,
+    "maxBet": 100.0,
+    "volatility": "High",
+    "gameHash": "hash6"
+  }
+]

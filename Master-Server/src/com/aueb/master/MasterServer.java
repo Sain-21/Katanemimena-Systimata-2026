@@ -12,17 +12,17 @@ public class MasterServer
 
     public static void main(String[] args) 
     {
-        System.out.println("Master Server is starting...");
+        System.out.println("[MASTER] : Master Server is starting...");
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) 
         {
-            System.out.println("Master is listening on port " + PORT);
+            System.out.println("[MASTER] : Master is listening on port " + PORT);
 
             while (true) 
-                {
+            {
                 //wait new connection
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("New client connected: " + clientSocket.getInetAddress());
+                System.out.println("[MASTER] : New client connected: " + clientSocket.getInetAddress());
 
                 //new thread for each client
                 Thread handler = new Thread(new ClientHandler(clientSocket));
@@ -31,12 +31,12 @@ public class MasterServer
         } 
         catch (IOException e) 
         {
-            System.err.println("Server error: " + e.getMessage());
+            System.err.println("[ERROR] : Server error: " + e.getMessage());
         }
     }
 }
 
-// Αυτή η κλάση αναλαμβάνει την επικοινωνία με τον κάθε πελάτη ξεχωριστά
+// client handler for each client
 class ClientHandler implements Runnable 
 {
     private Socket socket;
@@ -53,41 +53,42 @@ class ClientHandler implements Runnable
              ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) 
             {
             
-            // Διαβάζουμε το αντικείμενο που έστειλε ο Client
+            //read object that client sent
             Object received = in.readObject();
 
             if (received instanceof Game) 
             {
                 Game game = (Game) received;
-                System.out.println("[MASTER] Received new game from Manager: " + game.getGameName());
+                System.out.println("[MASTER] : Received game: " + game.getGameName());
 
-                // 1. Έχουμε 1 Worker για την ώρα (στην πόρτα 5001)
-                int numberOfNodes = 1; 
+                // diathesimoi workers (2)
+                int[] workerPorts = {5001, 5002};
+                int numberOfNodes = workerPorts.length;
 
-                // 2. Υπολογίζουμε σε ποιον Worker θα πάει (Η συνάρτηση Hash)
+                // sinatisi hash
                 int nodeId = Math.abs(game.getGameName().hashCode()) % numberOfNodes;
+                int targetPort = workerPorts[nodeId]; //5001 h 5002
 
-                // 3. Επειδή έχουμε μόνο 1 Worker τώρα, ξέρουμε ότι είναι στο port 5001
-                int workerPort = 5001; 
-                System.out.println("[MASTER] Forwarding game to Worker Node " + nodeId + " (Port: " + workerPort + ")");
+                System.out.println("[MASTER] : Forwarding game to Worker " + nodeId+1 + " on port " + targetPort);
 
-                // 4. Στέλνουμε το παιχνίδι στον Worker μέσω νέου TCP Socket
-                try (Socket workerSocket = new Socket("localhost", workerPort);
-                     ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream())) {
+                // send game to worker
+                try (Socket workerSocket = new Socket("localhost", targetPort);
+                     ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream())) 
+                    {
                     
                     workerOut.writeObject(game);
                     workerOut.flush();
-                    System.out.println("[MASTER] Game successfully forwarded to Worker!");
-                    
-                } catch (IOException e) {
-                    System.err.println("[MASTER] Failed to send game to Worker: " + e.getMessage());
+                } 
+                catch (IOException e) 
+                {
+                    System.err.println("[ERROR] : Failed to send game to Worker on port " + targetPort);
                 }
             }
 
         } 
         catch (IOException | ClassNotFoundException e)
         {
-            System.err.println("Error handling client: " + e.getMessage());
+            System.err.println("[ERROR] : Error handling client: " + e.getMessage());
         }
     }
 }
