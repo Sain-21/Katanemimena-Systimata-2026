@@ -76,15 +76,45 @@ class ClientHandler implements Runnable
                      ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream())) 
                     {
                     
-                    workerOut.writeObject(game);
                     workerOut.flush();
+                    
+                // dimiourgw to Input xwris na diavazoume tipota, gia na min skasei o worker
+                ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream());
+                                
+                workerOut.writeObject(game);
+                workerOut.flush();
                 } 
                 catch (IOException e) 
                 {
                     System.err.println("[ERROR] : Failed to send game to Worker on port " + targetPort);
                 }
             }
+            else if (received instanceof String) 
+            {
+                String gameName = (String) received;
+                System.out.println("[MASTER] : Search Query for: " + gameName);
 
+                int targetPort = (Math.abs(gameName.hashCode()) % 2 == 0) ? 5001 : 5002;
+                System.out.println("[MASTER] : Asking Worker at port " + targetPort);
+
+                try (Socket workerSocket = new Socket("localhost", targetPort);
+                    ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream());
+                    ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream());) 
+                {   
+                    workerOut.writeObject(gameName);
+                    workerOut.flush();
+                    
+                    Object response = workerIn.readObject();
+                    out.writeObject(response);//send answer to player
+                    out.flush();
+                    System.out.println("[MASTER] : Got answer from Worker " + targetPort + " | Found game: "+ gameName);
+                    System.out.println("[MASTER] : Forwarding to player");
+                } 
+                catch (Exception e) 
+                {
+                    System.err.println("[ERROR] : Error querying worker: " + e.getMessage());
+                }
+            }
         } 
         catch (IOException | ClassNotFoundException e)
         {

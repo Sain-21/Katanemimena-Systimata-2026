@@ -10,8 +10,10 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ManagerClient {
-    public static void main(String[] args) {
+public class ManagerClient 
+{
+    public static void main(String[] args) 
+    {
         String host = "localhost";
         int port = 1312; //port
 
@@ -22,21 +24,20 @@ public class ManagerClient {
 
         // send game to master
         for (Game g : gamesToSend) 
-            {
-            try (Socket socket = new Socket(host, port);
+        {
+            try (Socket socket = new Socket("localhost", 1312);
                  ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream())) 
                 {
                 
                 System.out.println("[CLIENT] : Sending game: " + g.getGameName());
-                out.writeObject(g);
-                out.flush();
                 
-                Thread.sleep(500); 
-
-            } 
-            catch (Exception e) 
-            {
-                System.err.println("[ERROR] : game connection" + g.getGameName() + ": " + e.getMessage());
+                out.writeObject(g);
+                out.flush();//send games
+                
+                Thread.sleep(200); 
+                
+            } catch (Exception e) {
+                System.err.println("Error sending " + g.getGameName() + ": " + e.getMessage());
             }
         }
     }
@@ -59,17 +60,17 @@ public class ManagerClient {
                 
                 // Εξάγουμε τα δεδομένα
                 String name = extractValue(objStr, "gameName");
-                String provider = extractValue(objStr, "provider");
-                int reels = Integer.parseInt(extractValue(objStr, "reels"));
-                int maxWin = Integer.parseInt(extractValue(objStr, "maxWin"));
-                String imageUrl = extractValue(objStr, "imageUrl");
+                String provider = extractValue(objStr, "provider"); // Στο JSON είναι "provider"
+                int stars = Integer.parseInt(extractValue(objStr, "stars")); 
+                int votes = Integer.parseInt(extractValue(objStr, "noOfVotes"));
+                String logo = extractValue(objStr, "gameLogo");
                 double minBet = Double.parseDouble(extractValue(objStr, "minBet"));
                 double maxBet = Double.parseDouble(extractValue(objStr, "maxBet"));
-                String volatility = extractValue(objStr, "volatility");
-                String gameHash = extractValue(objStr, "gameHash");
+                String risk = extractValue(objStr, "riskLevel");
+                String hash = extractValue(objStr, "hashKey");
 
-                // Δημιουργούμε το αντικείμενο και το βάζουμε στη λίστα
-                games.add(new Game(name, provider, reels, maxWin, imageUrl, minBet, maxBet, volatility, gameHash));
+                // Δημιουργία με τη σωστή σειρά παραμέτρων της κλάσης Game
+                games.add(new Game(name, provider, stars, votes, logo, minBet, maxBet, risk, hash));
             }
         } 
         catch (Exception e) 

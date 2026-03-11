@@ -2,8 +2,7 @@ package com.aueb.shared;
 
 import java.io.Serializable;
 
-public class Game implements Serializable 
-{
+public class Game implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String gameName;
@@ -19,9 +18,8 @@ public class Game implements Serializable
     private String betCategory;
     private int jackpot;
 
-    //constructor
-    public Game(String gameName, String providerName, int stars, int noOfVotes, String gameLogo, double minBet, double maxBet, String riskLevel, String hashKey) 
-    {
+    // constructor
+    public Game(String gameName, String providerName, int stars, int noOfVotes, String gameLogo, double minBet, double maxBet, String riskLevel, String hashKey) {
         this.gameName = gameName;
         this.providerName = providerName;
         this.stars = stars;
@@ -32,12 +30,12 @@ public class Game implements Serializable
         this.riskLevel = riskLevel.toLowerCase();
         this.hashKey = hashKey;
         
-        //katigoria bet
+        // katigoria bet
         if (minBet >= 5.0) this.betCategory = "$$$";
         else if (minBet >= 1.0) this.betCategory = "$$";
         else this.betCategory = "$";
 
-        //jackpot
+        // jackpot
         if (this.riskLevel.equals("high")) this.jackpot = 40;
         else if (this.riskLevel.equals("medium")) this.jackpot = 20;
         else this.jackpot = 10;
@@ -89,7 +87,7 @@ public class Game implements Serializable
         return hashKey;
     }
 
-    public String getBetCategory() 
+    public String getBetCategory()
     {
         return betCategory;
     }
