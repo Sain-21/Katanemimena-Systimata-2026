@@ -25,17 +25,17 @@ public class PlayerClient
                 break;
             }
 
-            // Συνδεόμαστε στον Master για να κάνουμε την ερώτηση
+            // Syndeomaste ston master gia na kanoume tin erotisi
             try (Socket socket = new Socket(host, port);
                  ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
                  ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) 
                 {
 
-                // 1. Στέλνουμε το όνομα του παιχνιδιού (String)
+                // 1. Stelnoume to onoma tou paixnidiou (String)
                 out.writeObject(gameName);
                 out.flush();
 
-                // 2. Περιμένουμε την απάντηση (Game)
+                // 2. Perimenoume tin apantisi(Game)
                 Object response = in.readObject();
 
                 if (response instanceof Game) 
@@ -43,12 +43,11 @@ public class PlayerClient
                     Game foundGame = (Game) response;
                     System.out.println("FOUND! Game information:");
                     System.out.println("   - Name: " + foundGame.getGameName());
-                    System.out.println("   - Provider: " + foundGame.getProviderName()); // Άλλαξε εδώ
-                    System.out.println("   - Jackpot: " + foundGame.getJackpot());       // Άλλαξε εδώ
+                    System.out.println("   - Provider: " + foundGame.getProviderName()); 
+                    System.out.println("   - Jackpot: " + foundGame.getJackpot());       
                 } 
                 else if (response instanceof String)
                 {
-                    // Αν ο Master μας στείλει String, σημαίνει ότι έστειλε μήνυμα σφάλματος
                     System.out.println("[X] " + response);
                 }
 

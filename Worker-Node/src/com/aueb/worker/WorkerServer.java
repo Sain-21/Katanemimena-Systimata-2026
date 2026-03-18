@@ -1,6 +1,8 @@
 package com.aueb.worker;
 
 import com.aueb.shared.Game;
+import com.aueb.shared.RemoveGameRequest;
+
 import java.io.*;
 import java.net.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +42,22 @@ public class WorkerServer
                     Game game = (Game) received;
                     gamesList.put(game.getGameName(), game);
                     System.out.println("[WORKER-" + port + "] : Received and saved game: " + game.getGameName());
+                }
+                else if (received instanceof RemoveGameRequest)
+                {
+                    RemoveGameRequest req = (RemoveGameRequest) received;
+                    String gameName = req.getGameName();
+
+                    if(gamesList.remove(gameName) != null)
+                    {
+                        System.out.println("[WORKER-" + port + "] Removed game: " + gameName);
+                        out.writeObject("Game Removed!");
+                    }
+                    else
+                    {
+                        out.writeObject("Game not found!");
+                    }
+                    out.flush();
                 }
                 //game search
                 else if (received instanceof String) 

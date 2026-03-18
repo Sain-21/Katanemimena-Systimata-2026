@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 
 import com.aueb.shared.Game;
+import com.aueb.shared.RemoveGameRequest;
 
 public class MasterServer 
 {
@@ -113,6 +114,31 @@ class ClientHandler implements Runnable
                 catch (Exception e) 
                 {
                     System.err.println("[ERROR] : Error querying worker: " + e.getMessage());
+                }
+            }
+            else if (received instanceof RemoveGameRequest)
+            {
+                RemoveGameRequest req = (RemoveGameRequest) received;
+                String gameName = req.getGameName();
+
+                System.out.println("[MASTER] Remove request for: " + gameName);
+
+                int[] workerPorts = {5001 , 5002};
+                int nodeId = Math.abs(gameName.hashCode()) % workerPorts.length;
+                int targetPort = workerPorts[nodeId];
+
+                try(Socket workerSocket = new Socket("localhost" , targetPort);
+                    ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream());
+                    ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream()))
+                {
+                        workerOut.writeObject(req);
+                        workerOut.flush();
+
+                        Object response = workerIn.readObject();
+
+                        out.writeObject(response);
+                        out.flush();
+                        
                 }
             }
         } 
