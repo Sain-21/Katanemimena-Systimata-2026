@@ -5,12 +5,12 @@ import com.aueb.shared.RemoveGameRequest;
 
 import java.io.*;
 import java.net.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 
 public class WorkerServer 
 {
     // save games to worker memory
-    private static ConcurrentHashMap<String, Game> gamesList = new ConcurrentHashMap<>();
+    private static HashMap<String, Game> gamesList = new HashMap<String , Game>();
 
     public static void main(String[] args) 
     {
@@ -27,60 +27,13 @@ public class WorkerServer
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("[WORKER-" + port + "] : Worker is listening on port " + port);
-
-            while (true) 
+            while(true)
             {
                 Socket socket = serverSocket.accept();
-                
-                ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-                out.flush(); // Στέλνει το header αμέσως
-                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-                Object received = in.readObject();
 
-                if (received instanceof Game) 
-                {
-                    Game game = (Game) received;
-                    gamesList.put(game.getGameName(), game);
-                    System.out.println("[WORKER-" + port + "] : Received and saved game: " + game.getGameName());
-                }
-                else if (received instanceof RemoveGameRequest)
-                {
-                    RemoveGameRequest req = (RemoveGameRequest) received;
-                    String gameName = req.getGameName();
+                System.out.println("[WORKER-" + port + "] New connection");
 
-                    if(gamesList.remove(gameName) != null)
-                    {
-                        System.out.println("[WORKER-" + port + "] Removed game: " + gameName);
-                        out.writeObject("Game Removed!");
-                    }
-                    else
-                    {
-                        out.writeObject("Game not found!");
-                    }
-                    out.flush();
-                }
-                //game search
-                else if (received instanceof String) 
-                {
-                    String requestedGame = (String) received;
-                    System.out.println("[WORKER-" + port + "] Looking at memory for: " + requestedGame);
-
-                    //psaxnw sto hashmap
-                    if (gamesList.containsKey(requestedGame)) 
-                    {
-                        System.out.println("[WORKER-" + port + "] Found! Sending Callback.");
-                        out.writeObject(gamesList.get(requestedGame));//sending game obj
-                    } 
-                    else 
-                    {
-                        System.out.println("[WORKER-" + port + "] Game non existant here.");
-                        out.writeObject("[ERROR] : Game not found.");
-                    }
-                    out.flush();
-                }
-                in.close();
-                out.close();
-                socket.close();
+                new Thread(new WorkerHandler(socket , gamesList)).start();
             }
         } 
         catch (Exception e) 

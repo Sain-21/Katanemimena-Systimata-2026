@@ -1,6 +1,8 @@
 package com.aueb.client;
 
 import com.aueb.shared.Game;
+import com.aueb.shared.SearchRequest;
+
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -32,7 +34,7 @@ public class PlayerClient
                 {
 
                 // 1. Stelnoume to onoma tou paixnidiou (String)
-                out.writeObject(gameName);
+                out.writeObject(new SearchRequest(gameName));
                 out.flush();
 
                 // 2. Perimenoume tin apantisi(Game)

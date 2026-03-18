@@ -3,6 +3,7 @@ package com.aueb.master;
 import java.io.*;
 import java.net.*;
 
+import com.aueb.shared.SearchRequest;
 import com.aueb.shared.Game;
 import com.aueb.shared.RemoveGameRequest;
 
@@ -52,7 +53,7 @@ class ClientHandler implements Runnable
     {
         try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) 
-            {
+        {
             
             //read object that client sent
             Object received = in.readObject();
@@ -90,31 +91,48 @@ class ClientHandler implements Runnable
                     System.err.println("[ERROR] : Failed to send game to Worker on port " + targetPort);
                 }
             }
-            else if (received instanceof String) 
+            else if (received instanceof SearchRequest) 
             {
-                String gameName = (String) received;
-                System.out.println("[MASTER] : Search Query for: " + gameName);
+                SearchRequest req = (SearchRequest) received;
+                String gameName = req.getGameName();
 
-                int targetPort = (Math.abs(gameName.hashCode()) % 2 == 0) ? 5001 : 5002;
-                System.out.println("[MASTER] : Asking Worker at port " + targetPort);
+                System.out.println("[MASTER] MapReduce Search for: " + gameName);
 
-                try (Socket workerSocket = new Socket("localhost", targetPort);
-                    ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream());
-                    ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream());) 
-                {   
-                    workerOut.writeObject(gameName);
-                    workerOut.flush();
-                    
-                    Object response = workerIn.readObject();
-                    out.writeObject(response);//send answer to player
-                    out.flush();
-                    System.out.println("[MASTER] : Got answer from Worker " + targetPort + " | Found game: "+ gameName);
-                    System.out.println("[MASTER] : Forwarding to player");
-                } 
-                catch (Exception e) 
+                int[] workerPorts = {5001 , 5002};
+
+                Game foundGame = null;
+                for(int port : workerPorts)
                 {
-                    System.err.println("[ERROR] : Error querying worker: " + e.getMessage());
+                    try(Socket workerSocket = new Socket("localhost" , port);
+                        ObjectOutputStream oos = new ObjectOutputStream(workerSocket.getOutputStream());
+                        ObjectInputStream ois = new ObjectInputStream(workerSocket.getInputStream()))
+                    {
+                        oos.writeObject(req);
+                        oos.flush();
+
+                        Object response = ois.readObject();
+                        if(response !=null)
+                        {
+                            foundGame = (Game) response;
+                            System.out.println("[MASTER] Found result from worker " + port);
+                            break; //reduce 
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                        System.out.println("[MASTER] Worker " + port + " did not respond");
+                    }
                 }
+
+                if(foundGame != null)
+                {
+                    out.writeObject(foundGame);
+                }
+                else
+                {
+                    out.writeObject("Game not found!");
+                }
+                out.flush();
             }
             else if (received instanceof RemoveGameRequest)
             {
