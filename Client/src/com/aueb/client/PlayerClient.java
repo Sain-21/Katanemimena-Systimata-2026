@@ -2,6 +2,7 @@ package com.aueb.client;
 
 import com.aueb.shared.Game;
 import com.aueb.shared.SearchRequest;
+import com.aueb.shared.PlayRequest;
 
 import java.io.*;
 import java.net.*;
@@ -17,6 +18,9 @@ public class PlayerClient
 
         System.out.println("=== Welcome to CasinoLalo Search ===");
         
+        System.out.print("Enter your Name: ");
+        String username = scanner.nextLine();
+
         while (true) 
         {
             System.out.print("\nEnter the name of the game you are looking for; (write 'exit' to exit): ");
@@ -46,7 +50,31 @@ public class PlayerClient
                     System.out.println("FOUND! Game information:");
                     System.out.println("   - Name: " + foundGame.getGameName());
                     System.out.println("   - Provider: " + foundGame.getProviderName()); 
-                    System.out.println("   - Jackpot: " + foundGame.getJackpot());       
+                    System.out.println("   - Jackpot: " + foundGame.getJackpot());
+                    
+                    System.out.print("\nThelete na pontarete se auto to paixnidi? (nai/oxi): ");
+                    String answer = scanner.nextLine();
+
+                    if(answer.equalsIgnoreCase("nai"))
+                    {
+                        System.out.print("Posa xrhmata thelete na pontarete? ");
+                        double bet = Double.parseDouble(scanner.nextLine());
+
+                        try(Socket playSocket = new Socket(host , port);
+                            ObjectOutputStream oos = new ObjectOutputStream(playSocket.getOutputStream());
+                            ObjectInputStream ois = new ObjectInputStream(playSocket.getInputStream()))
+                        {
+                            oos.writeObject(new com.aueb.shared.PlayRequest(username , foundGame.getGameName(), bet));
+                            oos.flush();
+
+                            Object playResponse = ois.readObject();
+                            System.out.println("=== Apotelesma === " + playResponse);
+                        }
+                        catch (Exception e)
+                        {
+                            System.err.println("Error sto pontarisma: " + e.getMessage());
+                        }
+                    }
                 } 
                 else if (response instanceof String)
                 {

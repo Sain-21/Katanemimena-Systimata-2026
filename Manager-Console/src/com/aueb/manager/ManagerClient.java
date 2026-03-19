@@ -1,6 +1,7 @@
 package com.aueb.manager;
 
 import com.aueb.shared.Game;
+import com.aueb.shared.ListGamesRequest;
 import com.aueb.shared.RemoveGameRequest;
 
 import java.io.*;
@@ -22,7 +23,8 @@ public class ManagerClient
             System.out.println("\n============== Manager Menu ==============");
             System.out.println("1. Add games from JSON");
             System.out.println("2. Remove game");
-            System.out.println("3. Exit");
+            System.out.println("3. List all games");
+            System.out.println("4. Exit");
 
             int choice = sc.nextInt();
             sc.nextLine();
@@ -71,7 +73,32 @@ public class ManagerClient
                     e.printStackTrace();
                 }
             }
-            else 
+            else if(choice == 3)
+            {
+                try(Socket socket = new Socket(host , port);
+                    ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                    ObjectInputStream in = new ObjectInputStream(socket.getInputStream()))
+                {
+                    out.writeObject(new ListGamesRequest());
+                    out.flush();
+
+                    Object response = in.readObject();
+                    if (response instanceof List)
+                    {
+                        List <Game> games = (List<Game>) response;
+                        System.out.println("\n === ALL GAMES IN LALOFROUTA ===");
+                        for (Game g : games)
+                        {
+                            System.out.println(g.getGameName() + " | " + g.getProviderName());
+                        }
+                    }
+                }
+                catch(Exception e)
+                {
+                    e.printStackTrace();;
+                }
+            }
+            else if(choice == 4)
             {
                 break;
             }

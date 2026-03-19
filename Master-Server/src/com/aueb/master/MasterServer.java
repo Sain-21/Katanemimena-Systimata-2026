@@ -1,10 +1,14 @@
 package com.aueb.master;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.io.*;
 import java.net.*;
 
 import com.aueb.shared.SearchRequest;
 import com.aueb.shared.Game;
+import com.aueb.shared.ListGamesRequest;
+import com.aueb.shared.PlayRequest;
 import com.aueb.shared.RemoveGameRequest;
 
 public class MasterServer 
@@ -75,16 +79,14 @@ class ClientHandler implements Runnable
 
                 // send game to worker
                 try (Socket workerSocket = new Socket("localhost", targetPort);
-                     ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream())) 
-                    {
-                    
+                    ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream()); 
+                    ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream()))
+                {
+                    workerOut.writeObject(game);
                     workerOut.flush();
-                    
-                // dimiourgw to Input xwris na diavazoume tipota, gia na min skasei o worker
-                ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream());
-                                
-                workerOut.writeObject(game);
-                workerOut.flush();
+
+                    Object ack = workerIn.readObject();
+                    System.out.println("[MASTER] Worker response: " + ack);
                 } 
                 catch (IOException e) 
                 {
@@ -159,7 +161,65 @@ class ClientHandler implements Runnable
                         
                 }
             }
-        } 
+            else if (received instanceof ListGamesRequest)
+            {
+                System.out.println("[MASTER] List all games request");
+
+                int[] workerPorts = {5001 , 5002};
+                List<Game> allGames = new ArrayList<>();
+
+                for (int port : workerPorts)
+                {
+                    try(Socket worker = new Socket("localhost" , port);
+                        ObjectOutputStream oos = new ObjectOutputStream(worker.getOutputStream());
+                        ObjectInputStream ois = new ObjectInputStream(worker.getInputStream()))
+                    {
+                        oos.writeObject(received);
+                        oos.flush();
+
+                        Object response = ois.readObject();
+
+                        if (response instanceof List)
+                        {
+                            allGames.addAll((List<Game>) response);
+                        }
+                    }
+                    catch(Exception e)
+                    {
+                         System.out.println("[MASTER] Worker " + port + " did not respond");
+                    }       
+                }
+                out.writeObject(allGames);
+                out.flush();
+            }
+            else if (received instanceof PlayRequest)
+            {
+                PlayRequest req = (PlayRequest) received;
+                String gameName = req.getGameName();
+
+                int[] workerPorts = {5001 , 5002};
+                int nodeId = Math.abs(gameName.hashCode()) % workerPorts.length;
+                int targetPort = workerPorts[nodeId];
+
+                System.out.println("[MASTER] Forwarding PlayRequest for " + gameName + " to Worker on port " + targetPort);
+                try(Socket worker = new Socket("localhost" , targetPort);
+                    ObjectOutputStream oos = new ObjectOutputStream(worker.getOutputStream());
+                    ObjectInputStream ois = new ObjectInputStream(worker.getInputStream()))
+                {
+                    oos.writeObject(req);
+                    oos.flush();
+
+                    Object response = ois.readObject();
+                    out.writeObject(response);
+                    out.flush();
+                }
+                catch(Exception e)
+                {
+                    out.writeObject("Error: Worker not responding");
+                    out.flush();
+                }
+            }
+        }
         catch (IOException | ClassNotFoundException e)
         {
             System.err.println("[ERROR] : Error handling client: " + e.getMessage());
