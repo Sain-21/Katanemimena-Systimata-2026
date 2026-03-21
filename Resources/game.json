@@ -49,7 +49,7 @@
     "reels": 5,
     "maxWin": 500,
     "imageUrl": "zeus.png",
-    "minBet": 0.30,
+    "minBet": 5.0,
     "maxBet": 150.0,
     "volatility": "Medium",
     "gameHash": "hash5"

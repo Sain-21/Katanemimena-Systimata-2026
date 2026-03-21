@@ -86,10 +86,10 @@ public class ManagerClient
                     if (response instanceof List)
                     {
                         List <Game> games = (List<Game>) response;
-                        System.out.println("\n === ALL GAMES IN LALOFROUTA ===");
+                        System.out.println("\n === ALL GAMES IN LALOCASINO ===");
                         for (Game g : games)
                         {
-                            System.out.println(g.getGameName() + " | " + g.getProviderName());
+                            System.out.println(g.getGameName() + " | Category: " + g.getBetCategory() + " | Synolika pontarismata: " + g.getTotalBets() + " FUN");
                         }
                     }
                 }

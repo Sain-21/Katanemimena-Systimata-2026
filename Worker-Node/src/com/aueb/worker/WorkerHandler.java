@@ -10,6 +10,9 @@ import java.io.*;
 import java.util.ArrayList;
 import java.net.Socket;
 import java.util.HashMap;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+
 public class WorkerHandler implements Runnable
 {
     private Socket socket;
@@ -86,77 +89,101 @@ public class WorkerHandler implements Runnable
             else if (received instanceof PlayRequest)
             {
                 PlayRequest playReq = (PlayRequest) received;
-                String gName = playReq.getGameName();
                 double amount = playReq.getBetAmount();
-
                 Game game;
                 synchronized(gameList)
                 {
-                    game = gameList.get(gName);
+                    game = gameList.get(playReq.getGameName());
                 }
 
                 if(game == null)
                 {
-                    oos.writeObject("To paixnidi den brethike");
+                    oos.writeObject("Game not found!");
+                }
+                else if(amount < game.getMinBet() || amount > game.getMaxBet())
+                {
+                    oos.writeObject("Invalid!!! Allowed range: " + game.getMinBet() + " - " + game.getMaxBet());
                 }
                 else
                 {
                     try
                     {
-                        Socket srg = new Socket("localhost" , 6000);
-                        ObjectInputStream srgIn = new ObjectInputStream(srg.getInputStream());
-                        String[] srgData = (String[]) srgIn.readObject();
-                        srg.close();
+                        String[] srgData;
+                        synchronized(WorkerServer.lock)
+                        {
+                            while (WorkerServer.numberBuffer.isEmpty())
+                            {
+                                System.out.println("[WORKER] Waiting for numbers....");
+                                WorkerServer.lock.wait();
+                            }
+                            srgData = WorkerServer.numberBuffer.remove(0);
+                            WorkerServer.lock.notifyAll();
+                        }
 
                         int randomNumber = Integer.parseInt(srgData[0]);
                         String receivedHash = srgData[1];
 
-                        String secret = "LaloFroutaSecret";
-                        String checkStr = randomNumber + secret;
-                        java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-                        byte[] hashBytes = digest.digest(checkStr.getBytes("UTF-8"));
+                        String secret = "LaloFroutaSecret"; 
+                        String checkStr = randomNumber + secret ; 
 
-                        //Metatropi se Hex gia sygkrisi
-                        String calculatedHash = "";
-                        for (byte b : hashBytes) 
-                        {
-                            String hex = Integer.toHexString(0xff & b);
-                            if (hex.length() == 1) calculatedHash += "0";
-                            calculatedHash += hex;
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        byte[] hashBytes = digest.digest(checkStr.getBytes(StandardCharsets.UTF_8));
+
+                        StringBuilder sb = new StringBuilder();
+                        for (byte b : hashBytes) {
+                            sb.append(String.format("%02x", b));
                         }
-                        if(!calculatedHash.equals(receivedHash))
+                        String calculatedHash = sb.toString();          
+
+                        //elegxos an to hash pou steilame einai idio me auto p esteile o srg
+                        if (!calculatedHash.equals(receivedHash)) 
                         {
-                            oos.writeObject("Sfalma: Notheumenos Arithmos!");
-                        }
-                        else
+                            oos.writeObject("Error: Notheumenos Arithmos");
+                        } 
+                        else 
                         {
-                            //Ypologismos kerdous
                             double payout = 0;
-                            
                             if(randomNumber % 100 == 0)
                             {
                                 payout = amount * game.getJackpot();
-                                oos.writeObject("Jackpot!!! Kerdises: " + payout);
-                            }
-                            else if (randomNumber % 10 == 0)
-                            {
-                                //thelei risk level (bazw x2 gia aplotita)
-                                payout = amount * 2;
-                                oos.writeObject("Niki!!! Kerdises: " + payout);
+                                oos.writeObject("JACKPOT!!! Kerdises: " + payout);
                             }
                             else
                             {
-                                payout = 0;
-                                oos.writeObject("Xasate! O tyxaios arithmos itan: " + randomNumber);
+                                double multiplier = game.getMultiplier(randomNumber % 10);
+                                payout = amount * multiplier;
+                                if (payout > 0)
+                                {
+                                    oos.writeObject("Niki! Kerdises: " + payout);
+                                }
+                                else
+                                {
+                                    oos.writeObject("Xasate! O arithmos itan: " + randomNumber);
+                                }
                             }
-                            //enimerosi statistikon
                             game.addPlay(amount, payout);
+                            String player = playReq.getPlayerName();
+                            double profit = amount - payout;
+
+                            synchronized(WorkerServer.playerProfits)
+                            {
+                                double oldProf = EorkerServer.playerProfits.getOrDefault(player , 0.0);
+                                double newProfit = oldProfit + profit;
+                                WorkerServer.playerProfits.put(player , newProfit);
+                            }
+                            System.out.println("---------------------------------------");
+                            System.out.println("[STAT - UPDATE] Game: " + game.getGameName());
+                            System.out.println("PLAYER PROFITS: " + WorkerServer.playerProfits);
+                            System.out.println("Bet: " + amount + " | Payout: " + payout);
+                            System.out.println("Total Bets: " + game.getTotalBets());
+                            System.out.println("Total Payouts: " + game.getTotalPayouts());
+                            System.out.println("Current Profit: " + game.getProfit());
+                            System.out.println("---------------------------------------");
                         }
                     }
                     catch(Exception e)
                     {
                         oos.writeObject("Sfalma kata to pontarisma");
-                        e.printStackTrace();
                     }
                 }
                 oos.flush();

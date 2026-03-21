@@ -20,6 +20,10 @@ public class Game implements Serializable {
     private double totalBets = 0;
     private double totalPayouts = 0;
 
+    private static final double[] lowRiskTable = {0.0 , 0.0 , 0.0 , 0.1 , 0.5 , 1.0 , 1.1 , 1.3 , 2.0 , 2.5};
+    private static final double[] medRiskTable = {0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.5 , 1.0 , 1.5 , 2.5 , 3.5};
+    private static final double[] highRiskTable = {0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 1.0 , 2.0 , 6.5};
+
     // constructor
     public Game(String gameName, String providerName, int stars, int noOfVotes, String gameLogo, double minBet, double maxBet, String riskLevel, String hashKey) {
         this.gameName = gameName;
@@ -30,12 +34,7 @@ public class Game implements Serializable {
         this.minBet = minBet;
         this.maxBet = maxBet;
         this.riskLevel = riskLevel.toLowerCase();
-        this.hashKey = hashKey;
-        
-        // katigoria bet
-        if (minBet >= 5.0) this.betCategory = "$$$";
-        else if (minBet >= 1.0) this.betCategory = "$$";
-        else this.betCategory = "$";
+        this.hashKey = hashKey;       
 
         // jackpot
         if (this.riskLevel.equals("high")) this.jackpot = 40;
@@ -91,7 +90,9 @@ public class Game implements Serializable {
 
     public String getBetCategory()
     {
-        return betCategory;
+        if (this.minBet >= 5.0) return "$$$";
+        if (this.minBet >= 1.0) return "$$";
+        return "$";
     }
 
     public int getJackpot() 
@@ -108,5 +109,37 @@ public class Game implements Serializable {
     public double getProfit()
     {
         return totalBets - totalPayouts;
+    }
+
+    public double getMultiplier(int i)
+    {
+        if(this.riskLevel.equals("low"))
+        {
+            return lowRiskTable[i];
+        }
+        else if (this.riskLevel.equals("medium"))
+        {
+            return medRiskTable[i];
+        }
+        else
+        {
+            return highRiskTable[i];
+        }
+    }
+
+    public double getTotalBets()
+    {
+        return totalBets;
+    }
+
+    public double getTotalPayouts()
+    {
+        return totalPayouts;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Game: " + gameName + " [" + betCategory + "] | Jackpot: " + jackpot + "x | Risk: " + riskLevel; 
     }
 }
