@@ -1,20 +1,27 @@
 package com.aueb.shared;
 
 import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-public class Game implements Serializable {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class Game implements Serializable 
+{
     private static final long serialVersionUID = 1L;
 
     private String gameName;
+
+    @JsonProperty("provider")
     private String providerName;
-    private int stars;
+
+    private double stars;
     private int noOfVotes;
     private String gameLogo;
     private double minBet;
     private double maxBet;
     private String riskLevel;
     private String hashKey;
-    
+
     private String betCategory;
     private int jackpot;
     private double totalBets = 0;
@@ -24,8 +31,11 @@ public class Game implements Serializable {
     private static final double[] medRiskTable = {0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.5 , 1.0 , 1.5 , 2.5 , 3.5};
     private static final double[] highRiskTable = {0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 1.0 , 2.0 , 6.5};
 
-    // constructor
-    public Game(String gameName, String providerName, int stars, int noOfVotes, String gameLogo, double minBet, double maxBet, String riskLevel, String hashKey) {
+    public Game() {}
+
+    public Game(String gameName, String providerName, double stars, int noOfVotes, String gameLogo,
+                double minBet, double maxBet, String riskLevel, String hashKey) 
+    {
         this.gameName = gameName;
         this.providerName = providerName;
         this.stars = stars;
@@ -33,16 +43,10 @@ public class Game implements Serializable {
         this.gameLogo = gameLogo;
         this.minBet = minBet;
         this.maxBet = maxBet;
-        this.riskLevel = riskLevel.toLowerCase();
-        this.hashKey = hashKey;       
-
-        // jackpot
-        if (this.riskLevel.equals("high")) this.jackpot = 40;
-        else if (this.riskLevel.equals("medium")) this.jackpot = 20;
-        else this.jackpot = 10;
+        setRiskLevel(riskLevel);
+        this.hashKey = hashKey;
     }
 
-    //getters
     public String getGameName() 
     {
         return gameName;
@@ -53,7 +57,7 @@ public class Game implements Serializable {
         return providerName;
     }
 
-    public int getStars() 
+    public double getStars() 
     {
         return stars;
     }
@@ -88,7 +92,7 @@ public class Game implements Serializable {
         return hashKey;
     }
 
-    public String getBetCategory()
+    public String getBetCategory() 
     {
         if (this.minBet >= 5.0) return "$$$";
         if (this.minBet >= 1.0) return "$$";
@@ -100,46 +104,119 @@ public class Game implements Serializable {
         return jackpot;
     }
 
-    public synchronized void addPlay(double bet , double payout)
+    public double getTotalBets() 
+    {
+        return totalBets;
+    }
+
+    public double getTotalPayouts() 
+    {
+        return totalPayouts;
+    }
+
+    public void setGameName(String gameName) 
+    {
+        this.gameName = gameName;
+    }
+
+    public void setProviderName(String providerName) 
+    {
+        this.providerName = providerName;
+    }
+
+    public void setStars(double stars) 
+    {
+        this.stars = stars;
+    }
+
+    public void setNoOfVotes(int noOfVotes) 
+    {
+        this.noOfVotes = noOfVotes;
+    }
+
+    public void setGameLogo(String gameLogo) 
+    {
+        this.gameLogo = gameLogo;
+    }
+
+    public void setMinBet(double minBet) 
+    {
+        this.minBet = minBet;
+    }
+
+    public void setMaxBet(double maxBet) 
+    {
+        this.maxBet = maxBet;
+    }
+
+    public void setRiskLevel(String riskLevel) 
+    {
+        if (riskLevel == null || riskLevel.trim().isEmpty()) 
+        {
+            this.riskLevel = "low";
+        } 
+        else 
+        {
+            this.riskLevel = riskLevel.toLowerCase();
+        }
+
+        if (this.riskLevel.equals("high")) this.jackpot = 40;
+        else if (this.riskLevel.equals("medium")) this.jackpot = 20;
+        else this.jackpot = 10;
+    }
+
+    public void setHashKey(String hashKey) 
+    {
+        this.hashKey = hashKey;
+    }
+
+    public void setTotalBets(double totalBets) 
+    {
+        this.totalBets = totalBets;
+    }
+
+    public void setTotalPayouts(double totalPayouts) 
+    {
+        this.totalPayouts = totalPayouts;
+    }
+
+    public synchronized void addPlay(double bet, double payout) 
     {
         this.totalBets += bet;
         this.totalPayouts += payout;
     }
 
-    public double getProfit()
+    public synchronized void addRating(int newStars) 
     {
-        return totalBets - totalPayouts;
+        double currentTotal = this.stars * this.noOfVotes;
+        this.noOfVotes++;
+        this.stars = (currentTotal + newStars) / this.noOfVotes;
     }
 
-    public double getMultiplier(int i)
+    public double getProfit() 
     {
-        if(this.riskLevel.equals("low"))
+        return this.totalBets - this.totalPayouts;
+    }
+
+    public double getMultiplier(int i) 
+    {
+        if (this.riskLevel.equals("low")) 
         {
             return lowRiskTable[i];
-        }
-        else if (this.riskLevel.equals("medium"))
+        } 
+        else if (this.riskLevel.equals("medium")) 
         {
             return medRiskTable[i];
-        }
-        else
+        } 
+        else 
         {
             return highRiskTable[i];
         }
     }
 
-    public double getTotalBets()
-    {
-        return totalBets;
-    }
-
-    public double getTotalPayouts()
-    {
-        return totalPayouts;
-    }
-
     @Override
-    public String toString()
+    public String toString() 
     {
-        return "Game: " + gameName + " [" + betCategory + "] | Jackpot: " + jackpot + "x | Risk: " + riskLevel; 
+        return "Game: " + gameName + " [" + getBetCategory() + "] | Jackpot: " + jackpot + "x | Risk: " + riskLevel;
     }
 }

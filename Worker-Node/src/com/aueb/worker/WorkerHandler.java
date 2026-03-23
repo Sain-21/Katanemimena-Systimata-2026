@@ -1,198 +1,198 @@
 package com.aueb.worker;
 
-import com.aueb.shared.Game;
-import com.aueb.shared.ListGamesRequest;
-import com.aueb.shared.PlayRequest;
-import com.aueb.shared.RemoveGameRequest;
-import com.aueb.shared.SearchRequest;
-
+import com.aueb.RateRequest;
+import com.aueb.shared.*;
 import java.io.*;
-import java.util.ArrayList;
 import java.net.Socket;
-import java.util.HashMap;
+import java.util.*;
 import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 
-public class WorkerHandler implements Runnable
+public class WorkerHandler implements Runnable 
 {
     private Socket socket;
-    private HashMap<String , Game> gameList;
+    private HashMap<String, Game> gameList;
 
-    public WorkerHandler(Socket socket , HashMap<String , Game> gameList)
+    public WorkerHandler(Socket socket, HashMap<String, Game> gameList) 
     {
         this.socket = socket;
         this.gameList = gameList;
     }
 
     @Override
-    public void run()
+    public void run() 
     {
-        try(ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream()))
-        {
+        try (ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) 
+             {
+            
             Object received = ois.readObject();
 
-            if(received instanceof Game)
+            // add game
+            if (received instanceof Game) 
             {
                 Game game = (Game) received;
-                synchronized(gameList)
+                synchronized (gameList) 
                 {
-                    gameList.put(game.getGameName() , game);
+                    gameList.put(game.getGameName(), game);
                 }
-                System.out.println("[WORKER] Saved game: " + game.getGameName());
-                oos.writeObject("Game Added Successfully");
-                oos.flush();
-            }   
-            else if(received instanceof RemoveGameRequest)
+                System.out.println("[WORKER] Saved/Updated game: " + game.getGameName());
+                oos.writeObject("Game Processed Successfully");
+            } 
+            
+            // remove game
+            else if (received instanceof RemoveGameRequest) 
             {
                 RemoveGameRequest req = (RemoveGameRequest) received;
-                String gameName = req.getGameName();   
-                synchronized(gameList)
-                {
-                    if(gameList.remove(gameName) != null)
+                synchronized (gameList) {
+                    if (gameList.remove(req.getGameName()) != null) 
                     {
-                       oos.writeObject("Game Removed!");
-                    }
-                    else
+                        oos.writeObject("Game Removed!");
+                    } 
+                    else 
                     {
                         oos.writeObject("Game not found!");
                     }
                 }
-                oos.flush();
             }
-            else if(received instanceof SearchRequest)
+
+            //search
+            else if (received instanceof SearchRequest) 
             {
                 SearchRequest req = (SearchRequest) received;
-                String requestedGame = req.getGameName();
-
-                synchronized(gameList)
+                synchronized (gameList) 
                 {
-                    if(gameList.containsKey(requestedGame))
-                    {
-                        oos.writeObject(gameList.get(requestedGame));
-                    }
-                    else
-                    {
-                        oos.writeObject(null); // gia reduce
-                    }
+                    oos.writeObject(gameList.get(req.getGameName()));
                 }
-                oos.flush();
             }
-            else if(received instanceof ListGamesRequest)
+
+            // game list
+            else if (received instanceof ListGamesRequest) 
             {
-                synchronized(gameList)
+                synchronized (gameList) 
                 {
                     oos.writeObject(new ArrayList<>(gameList.values()));
                 }
-                oos.flush();
             }
-            else if (received instanceof PlayRequest)
+
+            //play game
+            else if (received instanceof PlayRequest) 
             {
-                PlayRequest playReq = (PlayRequest) received;
-                double amount = playReq.getBetAmount();
-                Game game;
-                synchronized(gameList)
-                {
-                    game = gameList.get(playReq.getGameName());
-                }
-
-                if(game == null)
-                {
-                    oos.writeObject("Game not found!");
-                }
-                else if(amount < game.getMinBet() || amount > game.getMaxBet())
-                {
-                    oos.writeObject("Invalid!!! Allowed range: " + game.getMinBet() + " - " + game.getMaxBet());
-                }
-                else
-                {
-                    try
-                    {
-                        String[] srgData;
-                        synchronized(WorkerServer.lock)
-                        {
-                            while (WorkerServer.numberBuffer.isEmpty())
-                            {
-                                System.out.println("[WORKER] Waiting for numbers....");
-                                WorkerServer.lock.wait();
-                            }
-                            srgData = WorkerServer.numberBuffer.remove(0);
-                            WorkerServer.lock.notifyAll();
-                        }
-
-                        int randomNumber = Integer.parseInt(srgData[0]);
-                        String receivedHash = srgData[1];
-
-                        String secret = "LaloFroutaSecret"; 
-                        String checkStr = randomNumber + secret ; 
-
-                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                        byte[] hashBytes = digest.digest(checkStr.getBytes(StandardCharsets.UTF_8));
-
-                        StringBuilder sb = new StringBuilder();
-                        for (byte b : hashBytes) {
-                            sb.append(String.format("%02x", b));
-                        }
-                        String calculatedHash = sb.toString();          
-
-                        //elegxos an to hash pou steilame einai idio me auto p esteile o srg
-                        if (!calculatedHash.equals(receivedHash)) 
-                        {
-                            oos.writeObject("Error: Notheumenos Arithmos");
-                        } 
-                        else 
-                        {
-                            double payout = 0;
-                            if(randomNumber % 100 == 0)
-                            {
-                                payout = amount * game.getJackpot();
-                                oos.writeObject("JACKPOT!!! Kerdises: " + payout);
-                            }
-                            else
-                            {
-                                double multiplier = game.getMultiplier(randomNumber % 10);
-                                payout = amount * multiplier;
-                                if (payout > 0)
-                                {
-                                    oos.writeObject("Niki! Kerdises: " + payout);
-                                }
-                                else
-                                {
-                                    oos.writeObject("Xasate! O arithmos itan: " + randomNumber);
-                                }
-                            }
-                            game.addPlay(amount, payout);
-                            String player = playReq.getPlayerName();
-                            double profit = amount - payout;
-
-                            synchronized(WorkerServer.playerProfits)
-                            {
-                                double oldProf = EorkerServer.playerProfits.getOrDefault(player , 0.0);
-                                double newProfit = oldProfit + profit;
-                                WorkerServer.playerProfits.put(player , newProfit);
-                            }
-                            System.out.println("---------------------------------------");
-                            System.out.println("[STAT - UPDATE] Game: " + game.getGameName());
-                            System.out.println("PLAYER PROFITS: " + WorkerServer.playerProfits);
-                            System.out.println("Bet: " + amount + " | Payout: " + payout);
-                            System.out.println("Total Bets: " + game.getTotalBets());
-                            System.out.println("Total Payouts: " + game.getTotalPayouts());
-                            System.out.println("Current Profit: " + game.getProfit());
-                            System.out.println("---------------------------------------");
-                        }
-                    }
-                    catch(Exception e)
-                    {
-                        oos.writeObject("Sfalma kata to pontarisma");
-                    }
-                }
-                oos.flush();
+                handlePlayRequest((PlayRequest) received, oos);
             }
-            socket.close();
-        }
-        catch(Exception e)
+
+            // player statistics
+            else if (received instanceof String && received.equals("GET_PLAYER_STATS")) 
+            {
+                synchronized (WorkerServer.playerProfits) 
+                {
+                    oos.writeObject(new HashMap<>(WorkerServer.playerProfits));
+                }
+            }
+
+            else if (received instanceof RateRequest) 
+            {
+                RateRequest rr = (RateRequest) received;
+                synchronized(gameList) 
+                {
+                    Game g = gameList.get(rr.getGameName());
+                    if (g != null) g.addRating(rr.getStars());
+                }
+            }
+
+            oos.flush();
+        } 
+        catch (Exception e) 
         {
-            e.printStackTrace();
+            System.err.println("[WORKER ERROR] " + e.getMessage());
         }
+    }
+
+    private void handlePlayRequest(PlayRequest playReq, ObjectOutputStream oos) throws Exception 
+    {
+        double amount = playReq.getBetAmount();
+        Game game;
+        
+        synchronized (gameList) 
+        {
+            game = gameList.get(playReq.getGameName());
+        }
+
+        if (game == null) 
+        {
+            oos.writeObject("Game not found!");
+            return;
+        }
+
+        if (amount < game.getMinBet() || amount > game.getMaxBet()) 
+        {
+            oos.writeObject("Invalid bet! Range: " + game.getMinBet() + " - " + game.getMaxBet());
+            return;
+        }
+
+        //get number from buffer(srg)
+        String[] srgData;
+        synchronized (WorkerServer.lock) 
+        {
+            while (WorkerServer.numberBuffer.isEmpty()) 
+            {
+                System.out.println("[WORKER] : Waiting for SRG numbers...");
+                WorkerServer.lock.wait();
+            }
+            srgData = WorkerServer.numberBuffer.remove(0);
+            WorkerServer.lock.notifyAll();
+        }
+
+        int randomNumber = Integer.parseInt(srgData[0]);
+        String receivedHash = srgData[1];
+
+        //hash verify
+        if (!verifyHash(randomNumber, receivedHash)) 
+        {
+            oos.writeObject("[ERROR] : Manipulated number detected!");
+            return;
+        }
+
+        double payout = 0;
+        String message;
+
+        if (randomNumber % 100 == 0) 
+        {
+            payout = amount * game.getJackpot();
+            message = "JACKPOT!!! You won: " + payout;
+        } 
+        else
+        {
+            double multiplier = game.getMultiplier(randomNumber % 10);
+            payout = amount * multiplier;
+            message = (payout > 0) ? "Win! You won: " + payout : "Lost! Number was: " + randomNumber;
+        }
+
+        synchronized (game) 
+        {
+            game.addPlay(amount, payout);
+        }
+
+        double playerNetResult = payout - amount;
+
+        synchronized (WorkerServer.playerProfits) 
+        {
+            // update local worker map
+            WorkerServer.playerProfits.merge(playReq.getPlayerName(), playerNetResult, Double::sum);
+        }
+
+        System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
+        oos.writeObject(message);
+    }
+
+    private boolean verifyHash(int num, String receivedHash) throws Exception 
+    {
+        String secret = "LaloFroutaSecret";
+        String checkStr = num + secret;
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hashBytes = digest.digest(checkStr.getBytes(StandardCharsets.UTF_8));
+        StringBuilder sb = new StringBuilder();
+        for (byte b : hashBytes) sb.append(String.format("%02x", b));
+        return sb.toString().equals(receivedHash);
     }
 }

@@ -1,7 +1,7 @@
 package com.aueb.master;
 
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.io.*;
 import java.net.*;
 
@@ -13,8 +13,10 @@ import com.aueb.shared.RemoveGameRequest;
 
 public class MasterServer 
 {
-    //port
     private static final int PORT = 1312;
+    
+    // static map gia apothikeysi statistikwn paiktwn
+    public static Map<String, Double> playerStats = new ConcurrentHashMap<>();
 
     public static void main(String[] args) 
     {
@@ -26,11 +28,9 @@ public class MasterServer
 
             while (true) 
             {
-                //wait new connection
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("[MASTER] : New client connected: " + clientSocket.getInetAddress());
 
-                //new thread for each client
                 Thread handler = new Thread(new ClientHandler(clientSocket));
                 handler.start();
             }
@@ -42,10 +42,10 @@ public class MasterServer
     }
 }
 
-// client handler for each client
 class ClientHandler implements Runnable 
 {
     private Socket socket;
+    private static final int[] workerPorts = {5001, 5002};
 
     public ClientHandler(Socket socket) 
     {
@@ -58,171 +58,168 @@ class ClientHandler implements Runnable
         try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) 
         {
-            
-            //read object that client sent
             Object received = in.readObject();
 
+            // add game
             if (received instanceof Game) 
             {
                 Game game = (Game) received;
                 System.out.println("[MASTER] : Received game: " + game.getGameName());
 
-                // diathesimoi workers (2)
-                int[] workerPorts = {5001, 5002};
-                int numberOfNodes = workerPorts.length;
+                int nodeId = Math.abs(game.getGameName().hashCode()) % workerPorts.length;
+                int targetPort = workerPorts[nodeId];
 
-                // sinatisi hash
-                int nodeId = Math.abs(game.getGameName().hashCode()) % numberOfNodes;
-                int targetPort = workerPorts[nodeId]; //5001 h 5002
-
-                System.out.println("[MASTER] : Forwarding game to Worker " + nodeId+1 + " on port " + targetPort);
-
-                // send game to worker
-                try (Socket workerSocket = new Socket("localhost", targetPort);
-                    ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream()); 
-                    ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream()))
-                {
-                    workerOut.writeObject(game);
-                    workerOut.flush();
-
-                    Object ack = workerIn.readObject();
-                    System.out.println("[MASTER] Worker response: " + ack);
-                } 
-                catch (IOException e) 
-                {
-                    System.err.println("[ERROR] : Failed to send game to Worker on port " + targetPort);
-                }
+                // proothisi ston worker
+                forwardToWorker(targetPort, game, null);
+                System.out.println("[MASTER] : Game " + game.getGameName() + " sent to Worker on port " + targetPort);
+                out.writeObject("Game " + game.getGameName() + " received and forwarded.");
+                out.flush();
             }
+
+            //game search
             else if (received instanceof SearchRequest) 
             {
                 SearchRequest req = (SearchRequest) received;
-                String gameName = req.getGameName();
-
-                System.out.println("[MASTER] MapReduce Search for: " + gameName);
-
-                int[] workerPorts = {5001 , 5002};
+                System.out.println("[MASTER] MapReduce Search for: " + req.getGameName());
 
                 Game foundGame = null;
                 for(int port : workerPorts)
                 {
-                    try(Socket workerSocket = new Socket("localhost" , port);
-                        ObjectOutputStream oos = new ObjectOutputStream(workerSocket.getOutputStream());
-                        ObjectInputStream ois = new ObjectInputStream(workerSocket.getInputStream()))
+                    Object response = forwardToWorker(port, req, null);
+                    if(response instanceof Game) 
                     {
-                        oos.writeObject(req);
-                        oos.flush();
-
-                        Object response = ois.readObject();
-                        if(response !=null)
-                        {
-                            foundGame = (Game) response;
-                            System.out.println("[MASTER] Found result from worker " + port);
-                            break; //reduce 
-                        }
-                    }
-                    catch(Exception e)
-                    {
-                        System.out.println("[MASTER] Worker " + port + " did not respond");
+                        foundGame = (Game) response;
+                        break; 
                     }
                 }
-
-                if(foundGame != null)
-                {
-                    out.writeObject(foundGame);
-                }
-                else
-                {
-                    out.writeObject("Game not found!");
-                }
+                out.writeObject(foundGame != null ? foundGame : "Game not found!");
                 out.flush();
             }
+
+            //remove game
             else if (received instanceof RemoveGameRequest)
             {
                 RemoveGameRequest req = (RemoveGameRequest) received;
-                String gameName = req.getGameName();
-
-                System.out.println("[MASTER] Remove request for: " + gameName);
-
-                int[] workerPorts = {5001 , 5002};
-                int nodeId = Math.abs(gameName.hashCode()) % workerPorts.length;
-                int targetPort = workerPorts[nodeId];
-
-                try(Socket workerSocket = new Socket("localhost" , targetPort);
-                    ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream());
-                    ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream()))
-                {
-                        workerOut.writeObject(req);
-                        workerOut.flush();
-
-                        Object response = workerIn.readObject();
-
-                        out.writeObject(response);
-                        out.flush();
-                        
-                }
+                int nodeId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
+                Object response = forwardToWorker(workerPorts[nodeId], req, null);
+                out.writeObject(response);
+                out.flush();
             }
+
+            //game list
             else if (received instanceof ListGamesRequest)
             {
-                System.out.println("[MASTER] List all games request");
-
-                int[] workerPorts = {5001 , 5002};
                 List<Game> allGames = new ArrayList<>();
-
                 for (int port : workerPorts)
                 {
-                    try(Socket worker = new Socket("localhost" , port);
-                        ObjectOutputStream oos = new ObjectOutputStream(worker.getOutputStream());
-                        ObjectInputStream ois = new ObjectInputStream(worker.getInputStream()))
-                    {
-                        oos.writeObject(received);
-                        oos.flush();
-
-                        Object response = ois.readObject();
-
-                        if (response instanceof List)
-                        {
-                            allGames.addAll((List<Game>) response);
-                        }
+                    Object resp = forwardToWorker(port, received, null);
+                    if (resp instanceof List) {
+                        allGames.addAll((List<Game>) resp);
                     }
-                    catch(Exception e)
-                    {
-                         System.out.println("[MASTER] Worker " + port + " did not respond");
-                    }       
                 }
                 out.writeObject(allGames);
                 out.flush();
             }
+
+            //bet
             else if (received instanceof PlayRequest)
             {
                 PlayRequest req = (PlayRequest) received;
-                String gameName = req.getGameName();
-
-                int[] workerPorts = {5001 , 5002};
-                int nodeId = Math.abs(gameName.hashCode()) % workerPorts.length;
-                int targetPort = workerPorts[nodeId];
-
-                System.out.println("[MASTER] Forwarding PlayRequest for " + gameName + " to Worker on port " + targetPort);
-                try(Socket worker = new Socket("localhost" , targetPort);
-                    ObjectOutputStream oos = new ObjectOutputStream(worker.getOutputStream());
-                    ObjectInputStream ois = new ObjectInputStream(worker.getInputStream()))
+                int nodeId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
+                
+                //send request to worker
+                Object response = forwardToWorker(workerPorts[nodeId], req, null);
+        
+                double bet = req.getBetAmount();
+                double payout = 0.0; 
+                
+                if (response instanceof Double)
                 {
-                    oos.writeObject(req);
-                    oos.flush();
-
-                    Object response = ois.readObject();
-                    out.writeObject(response);
-                    out.flush();
-                }
-                catch(Exception e)
+                    payout = (Double) response;
+                } 
+                else if (response instanceof String) 
                 {
-                    out.writeObject("Error: Worker not responding");
-                    out.flush();
+                    try 
+                    {
+                        if (((String) response).contains("WIN")) 
+                        {
+                            payout = Double.parseDouble(((String) response).replaceAll("[^0-9.]", ""));
+                        }
+                    } 
+                    catch (Exception e) 
+                    { 
+                        payout = 0.0; 
+                    }
                 }
+
+                //casino profit
+                double netProfit = bet - payout;
+                MasterServer.playerStats.merge(req.getPlayerName(), netProfit, Double::sum);
+
+                out.writeObject(response);
+                out.flush();
+            }
+
+            //player statistics
+            else if (received instanceof String && received.equals("GET_PLAYER_STATS")) 
+            {
+                System.out.println("[MASTER] : Aggregating player stats from all workers...");
+                Map<String, Double> globalPlayerStats = new HashMap<>();
+                        
+                for (int port : workerPorts) 
+                {
+                    try (Socket workerSocket = new Socket("localhost", port);
+                         ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream());
+                         ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream())) 
+                         {
+                        
+                        // Στέλνουμε το αίτημα στον Worker
+                        workerOut.writeObject("GET_PLAYER_STATS");
+                        workerOut.flush();
+                        
+                        Object response = workerIn.readObject();
+                        if (response instanceof Map) 
+                        {
+                            Map<String, Double> workerMap = (Map<String, Double>) response;
+                            
+                            for (Map.Entry<String, Double> entry : workerMap.entrySet()) 
+                            {
+                                globalPlayerStats.merge(entry.getKey(), entry.getValue(), Double::sum);
+                            }
+                        }
+                    } 
+                    catch (Exception e) 
+                    {
+                        System.err.println("[MASTER] Could not get stats from worker at port " + port);
+                    }
+                }
+                //send map to manager
+                out.writeObject(globalPlayerStats);
+                out.flush();
             }
         }
         catch (IOException | ClassNotFoundException e)
         {
             System.err.println("[ERROR] : Error handling client: " + e.getMessage());
+        }
+    }
+
+    //helper func for communication with workers
+    private Object forwardToWorker(int port, Object request, Object defaultValue) 
+    {
+        try (Socket workerSocket = new Socket("localhost", port);
+             ObjectOutputStream oos = new ObjectOutputStream(workerSocket.getOutputStream());
+             ObjectInputStream ois = new ObjectInputStream(workerSocket.getInputStream())) 
+             {
+            
+            oos.writeObject(request);
+            oos.flush();
+            return ois.readObject();
+        }
+        catch (Exception e) 
+        {
+            System.err.println("[MASTER] Worker at " + port + " error: " + e.getMessage());
+            return defaultValue;
         }
     }
 }
