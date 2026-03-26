@@ -77,22 +77,26 @@ class ClientHandler implements Runnable
             }
 
             //game search
-            else if (received instanceof SearchRequest) 
-            {
+            // Μέσα στον Master ClientHandler
+            else if (received instanceof SearchRequest) {
                 SearchRequest req = (SearchRequest) received;
-                System.out.println("[MASTER] MapReduce Search for: " + req.getGameName());
-
-                Game foundGame = null;
-                for(int port : workerPorts)
-                {
+                List<Game> finalResults = new ArrayList<>();
+            
+                for (int port : workerPorts) {
+                    // Στέλνουμε το αίτημα σε κάθε worker [cite: 32]
                     Object response = forwardToWorker(port, req, null);
-                    if(response instanceof Game) 
-                    {
-                        foundGame = (Game) response;
-                        break; 
+                    if (response instanceof List) {
+                        // REDUCE: Προσθήκη στη συνολική λίστα [cite: 34]
+                        finalResults.addAll((List<Game>) response);
                     }
                 }
-                out.writeObject(foundGame != null ? foundGame : "Game not found!");
+            
+                // Αν η playAction ζήτησε ένα παιχνίδι, στείλε το πρώτο Game, αλλιώς όλη τη λίστα
+                if (req.getGameName() != null) {
+                    out.writeObject(!finalResults.isEmpty() ? finalResults.get(0) : "Game not found!");
+                } else {
+                    out.writeObject(finalResults);
+                }
                 out.flush();
             }
 

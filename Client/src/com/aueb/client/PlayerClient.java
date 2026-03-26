@@ -12,6 +12,7 @@ public class PlayerClient
     private static final int PORT = 1312;
     private static Scanner scanner = new Scanner(System.in);
     private static String username;
+    private static double balance = 0.0; // Τα tokens του παίκτη
 
     public static void main(String[] args) 
     {
@@ -22,14 +23,16 @@ public class PlayerClient
         while (true) 
         {
             System.out.println("\n--- PLAYER MENU ---");
+            System.out.println("Balance: " + balance);
             System.out.println("1. View ALL Games");
             System.out.println("2. Search & Play by Name");
             System.out.println("3. Filter Games (Stars, Bet, Risk)");
-            System.out.println("4. Exit");
+            System.out.println("4. Add tokens");
+            System.out.println("5. Exit");
             System.out.print("Choice: ");
             
             String choice = scanner.nextLine();
-            if (choice.equals("4")) break;
+            if (choice.equals("5")) break;
 
             switch (choice) 
             {
@@ -40,12 +43,24 @@ public class PlayerClient
                     searchAndPlay();
                     break;
                 case "3":
-                    filterMenu();
+                    searchWithFilters();
+                    break;
+                
+                case "4":
+                    addBalance();
                     break;
                 default:
                     System.out.println("Invalid choice!");
             }
         }
+    }
+
+    private static void addBalance() 
+    {
+        System.out.print("Posa Tokens Thelete na Prosthesete; ");
+        double amount = Double.parseDouble(scanner.nextLine());
+        balance += amount;
+        System.out.println("Epitixis Katathesi! Neo Balance: " + balance);
     }
 
     private static List<Game> fetchAllGames() 
@@ -85,41 +100,40 @@ public class PlayerClient
         if (!name.equalsIgnoreCase("back")) playAction(name);
     }
 
-    private static void filterMenu() 
+    private static void searchWithFilters() 
     {
-        System.out.println("\nFilter by:");
-        System.out.println("1. Stars (e.g. 4+)");
-        System.out.println("2. Bet Category ($, $$, $$$)");
-        System.out.println("3. Risk Level (Low, Medium, High)");
-        System.out.print("Choice: ");
-        String fChoice = scanner.nextLine();
-        
-        List<Game> all = fetchAllGames();
-        List<Game> filtered = new ArrayList<>();
+        System.out.print("Min Stars (1-5): ");
+        double stars = Double.parseDouble(scanner.nextLine());
+        System.out.print("Risk (low, medium, high): ");
+        String risk = scanner.nextLine();
+        System.out.print("Bet Limit ($, $$, $$$): ");
+        String limit = scanner.nextLine();
 
-        if (fChoice.equals("1")) 
-        {
-            System.out.print("Enter min stars (1-5): ");
-            double minStars = Double.parseDouble(scanner.nextLine());
-            for(Game g : all) if(g.getStars() >= minStars) filtered.add(g);
-        } 
+        SearchRequest req = new SearchRequest(username, stars, risk, limit);
 
-        else if (fChoice.equals("2")) 
-        {
-            System.out.print("Enter category ($, $$, $$$): ");
-            String cat = scanner.nextLine();
-            for(Game g : all) if(g.getBetCategory().equals(cat)) filtered.add(g);
-        } 
+        // Χρήση Thread για ασύγχρονη εκτέλεση ώστε η εφαρμογή να παραμένει διαδραστική 
+        new Thread(() -> {
+            try (Socket socket = new Socket(HOST, PORT);
+                 ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
 
-        else if (fChoice.equals("3")) 
-        {
-            System.out.print("Enter risk (Low, Medium, High): ");
-            String risk = scanner.nextLine();
-            for(Game g : all) if(g.getRiskLevel().equalsIgnoreCase(risk)) filtered.add(g);
-        }
-        
-        displayGames(filtered);
-    }
+                out.writeObject(req);
+                out.flush();
+
+                // Λήψη λίστας αποτελεσμάτων (MapReduce Result) 
+                Object resp = in.readObject();
+                if (resp instanceof List) {
+                    List<Game> results = (List<Game>) resp;
+                    System.out.println("\n--- Search Results (" + results.size() + " found) ---");
+                    for (Game g : results) {
+                        System.out.println("-> " + g.getGameName() + " (Stars: " + g.getStars() + ")");
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Async search error: " + e.getMessage());
+            }
+    }).start();
+}
 
     private static void searchAndPlay() {
         System.out.print("Enter game name: ");
@@ -154,14 +168,41 @@ public class PlayerClient
         System.out.print("Bet amount (" + found.getMinBet() + "-" + found.getMaxBet() + "): ");
         double amount = Double.parseDouble(scanner.nextLine());
 
+        if (amount > balance) 
+        {
+            System.out.println("Error: Aneparkes Ypolipo (Balance: " + balance + ")");
+            return;
+        }
+
+        balance -= amount;
+
         try (Socket s = new Socket(HOST, PORT);
              ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
              {
             
+            
             out.writeObject(new PlayRequest(username, gameName, amount));
             out.flush();
-            System.out.println("RESULT: " + in.readObject());
+
+            Object response = in.readObject();
+
+            if (response instanceof Double) {
+                double payout = (Double) response;
+                
+                // 4. Προσθήκη του payout στο balance
+                balance += payout; 
+
+                if (payout > amount) {
+                    System.out.println("WIN! You won " + payout);
+                } else if (payout == 0) {
+                    System.out.println("LOST! Better luck next time.");
+                } else {
+                    System.out.println("Partial return: " + payout);
+                }
+            }   
+
+            System.out.println("Current Balance: " + balance + " FUN");
 
             System.out.print("Rate this game (1-5 stars) or press Enter to skip: ");
             String rate = scanner.nextLine();
@@ -172,6 +213,7 @@ public class PlayerClient
         } 
         catch (Exception e) 
         { 
+            balance += amount;
             e.printStackTrace(); 
         }
     }

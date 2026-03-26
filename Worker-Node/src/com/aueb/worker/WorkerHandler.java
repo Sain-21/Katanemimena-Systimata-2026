@@ -57,13 +57,29 @@ public class WorkerHandler implements Runnable
             }
 
             //search
-            else if (received instanceof SearchRequest) 
-            {
+            // Μέσα στον WorkerHandler
+            else if (received instanceof SearchRequest) {
                 SearchRequest req = (SearchRequest) received;
-                synchronized (gameList) 
-                {
-                    oos.writeObject(gameList.get(req.getGameName()));
+                List<Game> matches = new ArrayList<>();
+            
+                synchronized(gameList) {
+                    for (Game g : gameList.values()) {
+                        // Αν αναζητάμε συγκεκριμένο όνομα (playAction)
+                        if (req.getGameName() != null) {
+                            if (g.getGameName().equalsIgnoreCase(req.getGameName())) {
+                                matches.add(g);
+                                break;
+                            }
+                        } 
+                        // Αλλιώς, φιλτράρισμα με MapReduce κριτήρια [cite: 69, 71]
+                        else if (g.getStars() >= req.getMinStars() &&
+                                 g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) &&
+                                 g.getBetCategory().equals(req.getBetLimit())) {
+                            matches.add(g);
+                        }
+                    }
                 }
+                oos.writeObject(matches);
             }
 
             // game list
@@ -174,6 +190,7 @@ public class WorkerHandler implements Runnable
         }
 
         double playerNetResult = payout - amount;
+        playerNetResult = Math.round(playerNetResult * 100.0) / 100.0;
 
         synchronized (WorkerServer.playerProfits) 
         {
@@ -182,7 +199,8 @@ public class WorkerHandler implements Runnable
         }
 
         System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
-        oos.writeObject(message);
+        //oos.writeObject(message);
+        oos.writeObject(Double.valueOf(payout));
     }
 
     private boolean verifyHash(int num, String receivedHash) throws Exception 
