@@ -1,4 +1,4 @@
-package com.aueb;
+package com.aueb.shared;
 
 import java.io.Serializable;
 

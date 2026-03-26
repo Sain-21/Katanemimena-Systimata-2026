@@ -1,6 +1,6 @@
 [ {
   "gameName" : "Book of Dead",
-  "stars" : 4,
+  "stars" : 4.0,
   "noOfVotes" : 1,
   "gameLogo" : null,
   "minBet" : 50.0,
@@ -15,7 +15,7 @@
   "provider" : "Play'n GO"
 }, {
   "gameName" : "Starburst",
-  "stars" : 0,
+  "stars" : 0.0,
   "noOfVotes" : 0,
   "gameLogo" : null,
   "minBet" : 0.1,
@@ -30,7 +30,7 @@
   "provider" : "NetEnt"
 }, {
   "gameName" : "Gonzo's Quest",
-  "stars" : 0,
+  "stars" : 0.0,
   "noOfVotes" : 0,
   "gameLogo" : null,
   "minBet" : 0.2,
@@ -45,7 +45,7 @@
   "provider" : "NetEnt"
 }, {
   "gameName" : "Tome of Madness",
-  "stars" : 0,
+  "stars" : 0.0,
   "noOfVotes" : 0,
   "gameLogo" : null,
   "minBet" : 0.1,
@@ -60,22 +60,22 @@
   "provider" : "Play'n GO"
 }, {
   "gameName" : "Zeus",
-  "stars" : 0,
+  "stars" : 0.0,
   "noOfVotes" : 0,
   "gameLogo" : null,
-  "minBet" : 5.0,
+  "minBet" : 10.0,
   "maxBet" : 150.0,
-  "riskLevel" : "low",
+  "riskLevel" : "high",
   "hashKey" : null,
   "betCategory" : "$$$",
-  "jackpot" : 0,
+  "jackpot" : 40,
   "totalBets" : 0.0,
   "totalPayouts" : 0.0,
   "profit" : 0.0,
   "provider" : "WMS"
 }, {
   "gameName" : "Gates of Olympus",
-  "stars" : 0,
+  "stars" : 0.0,
   "noOfVotes" : 0,
   "gameLogo" : null,
   "minBet" : 0.2,

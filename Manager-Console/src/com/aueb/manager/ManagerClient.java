@@ -26,8 +26,9 @@ public class ManagerClient
             System.out.println("3. Remove a game");
             System.out.println("4. Display Profit/Loss per GAME");
             System.out.println("5. Display Profit/Loss per PLAYER");
-            System.out.println("6. Edit game");
-            System.out.println("7. Exit");
+            System.out.println("6. Display Profit/Loss per PROVIDER");
+            System.out.println("7. Edit game");
+            System.out.println("8. Exit");
             System.out.print("Choice: ");
 
             String input = sc.nextLine().trim();
@@ -39,8 +40,9 @@ public class ManagerClient
             else if (choice == 3) removeGame();
             else if (choice == 4) showGameStats();
             else if (choice == 5) showPlayerStats();
-            else if (choice == 6) editLocalJson();
-            else if (choice == 7) break;
+            else if (choice == 6) showProviderStats();
+            else if (choice == 7) editLocalJson();
+            else if (choice == 8) break;
         }
     }
 
@@ -167,11 +169,34 @@ public class ManagerClient
                 g.setMaxBet(promptDouble("New Max Bet", g.getMaxBet()));
                 g.setRiskLevel(promptString("New Risk", g.getRiskLevel()));
                 writeGamesToJson(FILE_PATH, games);
+                sendGameToMaster(g);
                 System.out.println("[OK] Local JSON updated.");
                 return;
             }
         }
         System.out.println("Game not found.");
+    }
+
+    private static void showProviderStats()
+    {
+        try (Socket s = new Socket(HOST, PORT);
+            ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(s.getInputStream()))
+        {
+            out.writeObject("GET_PROVIDER_STATS");
+            Object response = in.readObject();
+
+            if (response instanceof Map)
+            {
+                Map<String, Double> stats = (Map<String, Double>) response;
+                System.out.println("\n--- PROFITS PER PROVIDER ---");
+                stats.forEach((k, v) -> System.out.printf("Provider: %-15s | Profit: %.2f\n", k, v));
+            }
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
     // helpers

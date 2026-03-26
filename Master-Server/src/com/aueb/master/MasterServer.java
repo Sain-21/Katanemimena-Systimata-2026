@@ -1,7 +1,6 @@
 package com.aueb.master;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.io.*;
 import java.net.*;
 
@@ -9,14 +8,14 @@ import com.aueb.shared.SearchRequest;
 import com.aueb.shared.Game;
 import com.aueb.shared.ListGamesRequest;
 import com.aueb.shared.PlayRequest;
+import com.aueb.shared.RateRequest;
 import com.aueb.shared.RemoveGameRequest;
 
 public class MasterServer 
 {
     private static final int PORT = 1312;
+    private static final int REDUCER_PORT = 7000;
     
-    // static map gia apothikeysi statistikwn paiktwn
-    public static Map<String, Double> playerStats = new ConcurrentHashMap<>();
 
     public static void main(String[] args) 
     {
@@ -38,6 +37,26 @@ public class MasterServer
         catch (IOException e) 
         {
             System.err.println("[ERROR] : Server error: " + e.getMessage());
+        }
+    }
+
+    public static Object sendToReducer(Object data)
+    {
+        try(
+            Socket rs = new Socket("localhost", REDUCER_PORT);
+            ObjectOutputStream out = new ObjectOutputStream(rs.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(rs.getInputStream());
+        )
+        {
+            out.writeObject(data);
+            out.flush();
+
+            return in.readObject();
+        }
+        catch(Exception e)
+        {
+            System.out.println("[MASTER] Reducer communication error");
+            return null;
         }
     }
 }
@@ -77,25 +96,31 @@ class ClientHandler implements Runnable
             }
 
             //game search
-            // Μέσα στον Master ClientHandler
+            // Mesa ston Master ClientHandler
             else if (received instanceof SearchRequest) {
                 SearchRequest req = (SearchRequest) received;
-                List<Game> finalResults = new ArrayList<>();
+                List<List<Game>> finalResults = new ArrayList<>();
             
                 for (int port : workerPorts) {
-                    // Στέλνουμε το αίτημα σε κάθε worker [cite: 32]
+                    // Stelnoume to aitima se kathe worker [cite: 32]
                     Object response = forwardToWorker(port, req, null);
                     if (response instanceof List) {
-                        // REDUCE: Προσθήκη στη συνολική λίστα [cite: 34]
-                        finalResults.addAll((List<Game>) response);
+                        // REDUCE: Prosthiki stin sinoliki lista [cite: 34]
+                        finalResults.add((List<Game>) response);
                     }
                 }
+
+                Object reducedResults = MasterServer.sendToReducer(finalResults);
             
-                // Αν η playAction ζήτησε ένα παιχνίδι, στείλε το πρώτο Game, αλλιώς όλη τη λίστα
-                if (req.getGameName() != null) {
-                    out.writeObject(!finalResults.isEmpty() ? finalResults.get(0) : "Game not found!");
-                } else {
-                    out.writeObject(finalResults);
+                // An i playAction zitise ena paixnidi, Steile to prwto Game, allios oli ti lista
+                if (req.getGameName() != null) 
+                {
+                    List<Game> finalList = (List<Game>) reducedResults;
+                    out.writeObject(!finalList.isEmpty() ? finalList.get(0) : "Game not found!");
+                } 
+                else 
+                {
+                    out.writeObject(reducedResults);
                 }
                 out.flush();
             }
@@ -113,15 +138,17 @@ class ClientHandler implements Runnable
             //game list
             else if (received instanceof ListGamesRequest)
             {
-                List<Game> allGames = new ArrayList<>();
+                List<List<Game>> allWorkerLists = new ArrayList<>();
                 for (int port : workerPorts)
                 {
                     Object resp = forwardToWorker(port, received, null);
-                    if (resp instanceof List) {
-                        allGames.addAll((List<Game>) resp);
+                    if (resp instanceof List)
+                    {
+                        allWorkerLists.add((List<Game>) resp);
                     }
                 }
-                out.writeObject(allGames);
+                Object reduced = MasterServer.sendToReducer(allWorkerLists);
+                out.writeObject(reduced);
                 out.flush();
             }
 
@@ -131,74 +158,38 @@ class ClientHandler implements Runnable
                 PlayRequest req = (PlayRequest) received;
                 int nodeId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
                 
-                //send request to worker
                 Object response = forwardToWorker(workerPorts[nodeId], req, null);
-        
-                double bet = req.getBetAmount();
-                double payout = 0.0; 
                 
-                if (response instanceof Double)
-                {
-                    payout = (Double) response;
-                } 
-                else if (response instanceof String) 
-                {
-                    try 
-                    {
-                        if (((String) response).contains("WIN")) 
-                        {
-                            payout = Double.parseDouble(((String) response).replaceAll("[^0-9.]", ""));
-                        }
-                    } 
-                    catch (Exception e) 
-                    { 
-                        payout = 0.0; 
-                    }
-                }
-
-                //casino profit
-                double netProfit = bet - payout;
-                MasterServer.playerStats.merge(req.getPlayerName(), netProfit, Double::sum);
-
                 out.writeObject(response);
                 out.flush();
+            }
+            else if(received instanceof RateRequest)
+            {
+                RateRequest rr = (RateRequest) received;
+                System.out.println("[MASTER] : Received rating for " + rr.getGameName());
+
+                int nodeId = Math.abs(rr.getGameName().hashCode()) % workerPorts.length;
+                forwardToWorker(workerPorts[nodeId], rr, null);
             }
 
             //player statistics
             else if (received instanceof String && received.equals("GET_PLAYER_STATS")) 
             {
                 System.out.println("[MASTER] : Aggregating player stats from all workers...");
-                Map<String, Double> globalPlayerStats = new HashMap<>();
-                        
-                for (int port : workerPorts) 
+                List<Map<String, Double>> partialMaps = new ArrayList<>();
+
+                for (int port : workerPorts)
                 {
-                    try (Socket workerSocket = new Socket("localhost", port);
-                         ObjectOutputStream workerOut = new ObjectOutputStream(workerSocket.getOutputStream());
-                         ObjectInputStream workerIn = new ObjectInputStream(workerSocket.getInputStream())) 
-                         {
-                        
-                        // Στέλνουμε το αίτημα στον Worker
-                        workerOut.writeObject("GET_PLAYER_STATS");
-                        workerOut.flush();
-                        
-                        Object response = workerIn.readObject();
-                        if (response instanceof Map) 
-                        {
-                            Map<String, Double> workerMap = (Map<String, Double>) response;
-                            
-                            for (Map.Entry<String, Double> entry : workerMap.entrySet()) 
-                            {
-                                globalPlayerStats.merge(entry.getKey(), entry.getValue(), Double::sum);
-                            }
-                        }
-                    } 
-                    catch (Exception e) 
+                    Object response = forwardToWorker(port, "GET_PLAYER_STATS", null);
+                    if (response instanceof Map)
                     {
-                        System.err.println("[MASTER] Could not get stats from worker at port " + port);
+                        partialMaps.add((Map<String, Double>) response);
                     }
                 }
-                //send map to manager
-                out.writeObject(globalPlayerStats);
+                System.out.println("[MASTER] Sending partial maps to Reducer...");
+
+                Object reducedStats = MasterServer.sendToReducer(partialMaps);
+                out.writeObject(reducedStats);
                 out.flush();
             }
         }

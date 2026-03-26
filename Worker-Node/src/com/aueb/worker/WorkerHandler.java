@@ -1,6 +1,5 @@
 package com.aueb.worker;
 
-import com.aueb.RateRequest;
 import com.aueb.shared.*;
 import java.io.*;
 import java.net.Socket;
@@ -57,21 +56,21 @@ public class WorkerHandler implements Runnable
             }
 
             //search
-            // Μέσα στον WorkerHandler
+            // Mesa ston WorkerHandler
             else if (received instanceof SearchRequest) {
                 SearchRequest req = (SearchRequest) received;
                 List<Game> matches = new ArrayList<>();
             
                 synchronized(gameList) {
                     for (Game g : gameList.values()) {
-                        // Αν αναζητάμε συγκεκριμένο όνομα (playAction)
+                        // An anazitame sygkekrimeno onoma (playAction)
                         if (req.getGameName() != null) {
                             if (g.getGameName().equalsIgnoreCase(req.getGameName())) {
                                 matches.add(g);
                                 break;
                             }
                         } 
-                        // Αλλιώς, φιλτράρισμα με MapReduce κριτήρια [cite: 69, 71]
+                        // alliws filtrarisma me mapreduce kritiria [cite: 69, 71]
                         else if (g.getStars() >= req.getMinStars() &&
                                  g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) &&
                                  g.getBetCategory().equals(req.getBetLimit())) {
@@ -115,7 +114,13 @@ public class WorkerHandler implements Runnable
                     if (g != null) g.addRating(rr.getStars());
                 }
             }
-
+            else if(received instanceof String && received.equals("GET_PROVIDER_STATS"))
+            {
+                synchronized(WorkerServer.providerProfits)
+                {
+                    oos.writeObject(new HashMap<>(WorkerServer.providerProfits));
+                }
+            }
             oos.flush();
         } 
         catch (Exception e) 
@@ -163,7 +168,7 @@ public class WorkerHandler implements Runnable
         String receivedHash = srgData[1];
 
         //hash verify
-        if (!verifyHash(randomNumber, receivedHash)) 
+        if (!verifyHash(randomNumber, receivedHash , game.getHashKey())) 
         {
             oos.writeObject("[ERROR] : Manipulated number detected!");
             return;
@@ -192,20 +197,31 @@ public class WorkerHandler implements Runnable
         double playerNetResult = payout - amount;
         playerNetResult = Math.round(playerNetResult * 100.0) / 100.0;
 
+
+            // update local worker map
         synchronized (WorkerServer.playerProfits) 
         {
-            // update local worker map
             WorkerServer.playerProfits.merge(playReq.getPlayerName(), playerNetResult, Double::sum);
+        }
+        
+        double providerNetResult = amount - payout;
+        synchronized(WorkerServer.providerProfits)
+        {
+            WorkerServer.providerProfits.merge(game.getProviderName(), providerNetResult, Double::sum);
         }
 
         System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
         //oos.writeObject(message);
         oos.writeObject(Double.valueOf(payout));
+        oos.flush();
     }
 
-    private boolean verifyHash(int num, String receivedHash) throws Exception 
+    private boolean verifyHash(int num, String receivedHash , String secret) throws Exception 
     {
-        String secret = "LaloFroutaSecret";
+        if(secret == null)
+        {
+            secret = "defaultSecret";
+        }
         String checkStr = num + secret;
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] hashBytes = digest.digest(checkStr.getBytes(StandardCharsets.UTF_8));

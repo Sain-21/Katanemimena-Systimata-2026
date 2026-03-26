@@ -13,6 +13,7 @@ public class WorkerServer
     public static ArrayList<String[]> numberBuffer = new ArrayList<>();
     public static final Object lock = new Object();
     public static HashMap<String , Double> playerProfits = new HashMap<>();
+    public static HashMap<String, Double> providerProfits = new HashMap<>();
     // save games to worker memory
     private static HashMap<String, Game> gamesList = new HashMap<String , Game>();
 

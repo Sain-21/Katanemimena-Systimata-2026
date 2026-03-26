@@ -4,12 +4,12 @@ import java.io.Serializable;
 public class SearchRequest implements Serializable 
 {
     private String playerID;
-    private String gameName; // Για απευθείας αναζήτηση
+    private String gameName; // apeuthias anazitisi
     private double minStars;
     private String riskLevel;
     private String betLimit;
 
-    // Constructor για αναζήτηση με φίλτρα
+    // Constructor gia anazitisi me filtra
     public SearchRequest(String playerID, double minStars, String riskLevel, String betLimit) 
     {
         this.playerID = playerID;
@@ -19,7 +19,7 @@ public class SearchRequest implements Serializable
         this.gameName = null;
     }
 
-    // Constructor για αναζήτηση μόνο με όνομα (για την playAction)
+    // Constructor gia anazitisi mono me onoma(gia tin playAction)
     public SearchRequest(String gameName) 
     {
         this.gameName = gameName;

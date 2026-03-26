@@ -1,6 +1,6 @@
 package com.aueb.client;
 
-import com.aueb.RateRequest;
+import com.aueb.shared.RateRequest;
 import com.aueb.shared.*;
 import java.io.*;
 import java.net.*;
@@ -12,7 +12,7 @@ public class PlayerClient
     private static final int PORT = 1312;
     private static Scanner scanner = new Scanner(System.in);
     private static String username;
-    private static double balance = 0.0; // Τα tokens του παίκτη
+    private static double balance = 0.0; // tokens
 
     public static void main(String[] args) 
     {
@@ -111,7 +111,7 @@ public class PlayerClient
 
         SearchRequest req = new SearchRequest(username, stars, risk, limit);
 
-        // Χρήση Thread για ασύγχρονη εκτέλεση ώστε η εφαρμογή να παραμένει διαδραστική 
+        // Xrisi thread gia asugxroni ektelesi oste h efarmogi na einai diadrastiki 
         new Thread(() -> {
             try (Socket socket = new Socket(HOST, PORT);
                  ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
@@ -120,7 +120,7 @@ public class PlayerClient
                 out.writeObject(req);
                 out.flush();
 
-                // Λήψη λίστας αποτελεσμάτων (MapReduce Result) 
+                // Lipsi listas apotelesmaton (MapReduce Result) 
                 Object resp = in.readObject();
                 if (resp instanceof List) {
                     List<Game> results = (List<Game>) resp;
@@ -190,7 +190,7 @@ public class PlayerClient
             if (response instanceof Double) {
                 double payout = (Double) response;
                 
-                // 4. Προσθήκη του payout στο balance
+                // 4. Prosthiki tou payout sto balance
                 balance += payout; 
 
                 if (payout > amount) {
