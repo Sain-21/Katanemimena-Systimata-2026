@@ -11,7 +11,7 @@ public class PlayerClient
     private static final int PORT = 1312;
     private static Scanner scanner = new Scanner(System.in);
     private static String username;
-    private static double balance = 0.0; // tokens
+    private static double balance = 0.0;
 
     public static void main(String[] args) 
     {
@@ -134,7 +134,8 @@ public class PlayerClient
     }).start();
 }
 
-    private static void searchAndPlay() {
+    private static void searchAndPlay() 
+    {
         System.out.print("Enter game name: ");
         String name = scanner.nextLine();
         playAction(name);
@@ -190,17 +191,22 @@ public class PlayerClient
 
             Object response = in.readObject();
 
-            if (response instanceof Double) {
+            if (response instanceof Double) 
+            {
                 double payout = (Double) response;
                 
-                // 4. Prosthiki tou payout sto balance
                 balance += payout; 
 
-                if (payout > amount) {
+                if (payout > amount) 
+                {
                     System.out.println("WIN! You won " + payout);
-                } else if (payout == 0) {
+                } 
+                else if (payout == 0) 
+                {
                     System.out.println("LOST! Better luck next time.");
-                } else {
+                } 
+                else 
+                {
                     System.out.println("Partial return: " + payout);
                 }
             }   

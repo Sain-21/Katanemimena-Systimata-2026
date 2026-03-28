@@ -69,24 +69,26 @@ public class WorkerHandler implements Runnable
             }
 
             //search
-            // Mesa ston WorkerHandler
-            else if (received instanceof SearchRequest) {
+            else if (received instanceof SearchRequest) 
+            {
                 SearchRequest req = (SearchRequest) received;
                 List<Game> matches = new ArrayList<>();
             
-                synchronized(gameList) {
-                    for (Game g : gameList.values()) {
-                        // An anazitame sygkekrimeno onoma (playAction)
-                        if (req.getGameName() != null) {
-                            if (g.getGameName().equalsIgnoreCase(req.getGameName())) {
+                synchronized(gameList) 
+                {
+                    for (Game g : gameList.values()) 
+                    {
+                        if (req.getGameName() != null) 
+                        {
+                            if (g.getGameName().equalsIgnoreCase(req.getGameName())) 
+                            {
                                 matches.add(g);
                                 break;
                             }
                         } 
-                        // alliws filtrarisma me mapreduce kritiria [cite: 69, 71]
-                        else if (g.getStars() >= req.getMinStars() &&
-                                 g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) &&
-                                 g.getBetCategory().equals(req.getBetLimit())) {
+
+                        else if (g.getStars() >= req.getMinStars() && g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) && g.getBetCategory().equals(req.getBetLimit())) 
+                        {
                             matches.add(g);
                         }
                     }
@@ -202,18 +204,15 @@ public class WorkerHandler implements Runnable
         }
 
         double payout = 0;
-        String message;
 
         if (randomNumber % 100 == 0) 
         {
             payout = amount * game.getJackpot();
-            message = "JACKPOT!!! You won: " + payout;
         } 
         else
         {
             double multiplier = game.getMultiplier(randomNumber % 10);
             payout = amount * multiplier;
-            message = (payout > 0) ? "Win! You won: " + payout : "Lost! Number was: " + randomNumber;
         }
 
         synchronized (game) 
@@ -235,7 +234,6 @@ public class WorkerHandler implements Runnable
         }
 
         System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
-        //oos.writeObject(message);
         oos.writeObject(Double.valueOf(payout));
         oos.flush();
     }

@@ -96,23 +96,22 @@ class ClientHandler implements Runnable
             }
 
             //game search
-            // Mesa ston Master ClientHandler
-            else if (received instanceof SearchRequest) {
+            else if (received instanceof SearchRequest) 
+            {
                 SearchRequest req = (SearchRequest) received;
                 List<List<Game>> finalResults = new ArrayList<>();
             
-                for (int port : workerPorts) {
-                    // Stelnoume to aitima se kathe worker [cite: 32]
+                for (int port : workerPorts) 
+                {
                     Object response = forwardToWorker(port, req, null);
-                    if (response instanceof List) {
-                        // REDUCE: Prosthiki stin sinoliki lista [cite: 34]
+                    if (response instanceof List) 
+                    {
                         finalResults.add((List<Game>) response);
                     }
                 }
 
                 Object reducedResults = MasterServer.sendToReducer(finalResults);
             
-                // An i playAction zitise ena paixnidi, Steile to prwto Game, allios oli ti lista
                 if (req.getGameName() != null) 
                 {
                     List<Game> finalList = (List<Game>) reducedResults;

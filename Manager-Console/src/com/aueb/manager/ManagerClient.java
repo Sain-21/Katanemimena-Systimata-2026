@@ -17,7 +17,6 @@ public class ManagerClient
 
     public static void main(String[] args) 
     {
-        //main screen
         while (true) 
         {
             System.out.println("\n================ Manager Console ================");
@@ -28,21 +27,54 @@ public class ManagerClient
             System.out.println("5. Display Profit/Loss per PLAYER");
             System.out.println("6. Display Profit/Loss per PROVIDER");
             System.out.println("7. Edit game");
-            System.out.println("8. Exit");
+            System.out.println("8. List local Games (from JSON)");
+            System.out.println("9. Exit");
             System.out.print("Choice: ");
 
             String input = sc.nextLine().trim();
             if (input.isEmpty()) continue;
             int choice = Integer.parseInt(input);
 
-            if (choice == 1) addFromJson();
-            else if (choice == 2) addManually();
-            else if (choice == 3) removeGame();
-            else if (choice == 4) showGameStats();
-            else if (choice == 5) showPlayerStats();
-            else if (choice == 6) showProviderStats();
-            else if (choice == 7) editLocalJson();
-            else if (choice == 8) break;
+            switch (choice) 
+            {
+                case 1:
+                    addFromJson();
+                    break;
+
+                case 2:
+                    addManually();
+                    break;
+
+                case 3:
+                    removeGame();
+                    break;
+
+                case 4:
+                    showGameStats();
+                    break;
+
+                case 5:
+                    showPlayerStats();
+                    break;
+
+                case 6:
+                    showProviderStats();
+                    break;
+
+                case 7:
+                    editLocalJson();
+                    break;
+
+                case 8:
+                    listLocalGames();
+                    break;
+
+                case 9:
+                    return;
+                    
+                default:
+                    break;
+            }
         }
     }
 
@@ -50,80 +82,111 @@ public class ManagerClient
     private static void addFromJson() 
     {
         List<Game> games = readGamesFromJson(FILE_PATH);
-        System.out.println("[INFO] : Sending " + games.size() + " games to Master...");
+        System.out.println("[MANAGER-INFO] : Sending " + games.size() + " games to Master...");
         for (Game g : games) 
         {
             sendGameToMaster(g);
         }
     }
 
-    // manual game add
+    // manual game creaton
     private static void addManually() 
     {
         System.out.println("\n--- Create New Game ---");
         String name = promptString("Game Name", "");
         if(name.trim().isEmpty())
         {
-            System.out.println("Error: Game name cannot be empty!");
+            System.out.println("[ERROR] : Game name cannot be empty!");
             return;
         }
+
+        List<Game> existingGames = readGamesFromJson(FILE_PATH);
+        for (Game g : existingGames) {
+            if (g.getGameName().equalsIgnoreCase(name)) {
+                System.out.println("[ERROR] : A game with this name already exists in JSON!");
+                return;
+            }
+        }
+
         String provider = promptString("Provider", "");
         int stars = promptInt("Stars (0-5)", 0);
         if(stars < 0 || stars > 5)
         {
-            System.out.println("Error: Stars must be between 0 and 5!");
+            System.out.println("[ERROR] : Stars must be between 0 and 5!");
             return;
         }
+
         double minBet = promptDouble("Min Bet", 0.1);
         double maxBet = promptDouble("Max Bet", 100.0);
         if(minBet < 0.1 || maxBet <= minBet)
         {
-            System.out.println("Error: Invalid bet range! (Min must be >= 0.1 and Max > Min)");
+            System.out.println("[ERROR] : Invalid bet range! (Min must be >= 0.1 and Max > Min)");
             return;
         }
+
         String risk = promptString("Risk Level (low/medium/high)", "low").toLowerCase();
         if(!Arrays.asList("low" , "medium" , "high").contains(risk))
         {
-            System.out.println("Error: Risk level must be low, medium, or high!");
+            System.out.println("[ERROR] : Risk level must be low, medium, or high!");
             return;
         }
-        Game newGame = new Game(name, provider, stars, 0, null, minBet, maxBet, risk, null);
+
+        //adding default secret
+        Game newGame = new Game(name, provider, stars, 0, null, minBet, maxBet, risk, "LaloFroutaSecret");
+        
+        //local save
+        existingGames.add(newGame);
+        writeGamesToJson(FILE_PATH, existingGames);
+        System.out.println("[INFO] : Game saved to local JSON.");
+
+        //send to master
         sendGameToMaster(newGame);
-        try
-        {
-            Thread.sleep(500); // Pause for 1 second
-        }
-        catch (InterruptedException e)
-        {
-            e.printStackTrace();
+        try 
+        { 
+            Thread.sleep(500); 
+        } 
+        catch (InterruptedException e) 
+        { 
+            e.printStackTrace(); 
         }
     }
 
-    // delete game
+    //delete game
     private static void removeGame() 
     {
         System.out.print("Name of game to remove: ");
-        String name = sc.nextLine();
+        String name = sc.nextLine().trim();
+        
+        // remove from master server
         try (Socket s = new Socket(HOST, PORT);
              ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
-             {
+        {
             out.writeObject(new RemoveGameRequest(name));
-            System.out.println("[SERVER]: " + in.readObject());
+            System.out.println("[SERVER] : " + in.readObject());
         } 
         catch (Exception e) 
         { 
             e.printStackTrace();
         }
+
+        //remove from local json
+        List<Game> games = readGamesFromJson(FILE_PATH);
+        boolean removed = games.removeIf(g -> g.getGameName().equalsIgnoreCase(name));
+        if (removed) 
+        {
+            writeGamesToJson(FILE_PATH, games);
+            System.out.println("[SUCCESS] : Game '" + name + "' removed from local JSON.");
+        }
     }
 
-    // statistics per game
+    // stats per game
     private static void showGameStats() 
     {
         try (Socket s = new Socket(HOST, PORT);
              ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
-             {
+        {
             out.writeObject(new ListGamesRequest());
             List<Game> games = (List<Game>) in.readObject();
 
@@ -141,14 +204,13 @@ public class ManagerClient
         }
     }
 
-    // statistics per player
+    //stats per player
     private static void showPlayerStats() 
     {
         try (Socket s = new Socket(HOST, PORT);
              ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
-             {
-            
+        {
             out.writeObject("GET_PLAYER_STATS");
             out.flush();
             
@@ -170,32 +232,11 @@ public class ManagerClient
         } 
         catch (Exception e) 
         {
-            System.out.println("[ERROR] Failed to fetch player stats: " + e.getMessage());
+            System.out.println("[ERROR] : Failed to fetch player stats: " + e.getMessage());
         }
     }
 
-    // edit game
-    private static void editLocalJson() 
-    {
-        List<Game> games = readGamesFromJson(FILE_PATH);
-        String name = promptString("Game name to edit", "");
-        for (Game g : games) 
-        {
-            if (g.getGameName().equalsIgnoreCase(name)) 
-            {
-                g.setGameName(promptString("New Name", g.getGameName()));
-                g.setMinBet(promptDouble("New Min Bet", g.getMinBet()));
-                g.setMaxBet(promptDouble("New Max Bet", g.getMaxBet()));
-                g.setRiskLevel(promptString("New Risk", g.getRiskLevel()));
-                writeGamesToJson(FILE_PATH, games);
-                sendGameToMaster(g);
-                System.out.println("[OK] Local JSON updated.");
-                return;
-            }
-        }
-        System.out.println("Game not found.");
-    }
-
+    //stats per provider
     private static void showProviderStats()
     {
         try (Socket s = new Socket(HOST, PORT);
@@ -218,24 +259,78 @@ public class ManagerClient
         }
     }
 
+    //edit game
+    private static void editLocalJson() 
+    {
+        List<Game> games = readGamesFromJson(FILE_PATH);
+        if (games.isEmpty()) 
+        {
+            System.out.println("[MANAGER-INFO] : No games found in local JSON.");
+            return;
+        }
+
+        System.out.println("\n--- Available Games to Edit ---");
+        for (Game g : games) 
+        {
+            System.out.println("- " + g.getGameName());
+        }
+
+        String name = promptString("\nType the Game Name to edit", "");
+        
+        for (Game g : games) 
+        {
+            if (g.getGameName().equalsIgnoreCase(name)) 
+            {
+                System.out.println("\nEditing Game: " + g.getGameName());
+                System.out.println("(Game Name cannot be changed. Delete and re-create if needed.)");
+                
+                g.setMinBet(promptDouble("New Min Bet", g.getMinBet()));
+                g.setMaxBet(promptDouble("New Max Bet", g.getMaxBet()));
+                g.setRiskLevel(promptString("New Risk (low/medium/high)", g.getRiskLevel()));
+                
+                writeGamesToJson(FILE_PATH, games);
+                sendGameToMaster(g);
+                
+                System.out.println("[SUCCESS] : Game updated in JSON and sent to Master.");
+                return;
+            }
+        }
+        System.out.println("[ERROR] : Game '" + name + "' not found.");
+    }
+
+    // local games list
+    private static void listLocalGames() 
+    {
+        List<Game> games = readGamesFromJson(FILE_PATH);
+        if (games.isEmpty()) 
+        {
+            System.out.println("[MANAGER-INFO] : No games found in local JSON.");
+            return;
+        }
+
+        System.out.println("\n--- Local Games in JSON ---");
+        for (Game g : games) 
+        {
+            System.out.printf("Name: %-15s | Provider: %-10s | Risk: %-6s | Bet: %.2f - %.2f\n",g.getGameName(), g.getProviderName(), g.getRiskLevel(), g.getMinBet(), g.getMaxBet());
+        }
+    }
+
     // helpers
     private static void sendGameToMaster(Game g) 
     {
         try (Socket s = new Socket(HOST, PORT);
              ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
-             {
+        {
             out.writeObject(g);
             out.flush();
             
-            //wait for acceptance
             Object response = in.readObject(); 
-            System.out.println("[SUCCESS] Master says: " + response);
-            
+            System.out.println("[SUCCESS] : Master says: " + response);
         } 
         catch (Exception e) 
         { 
-            System.err.println("Failed to send " + g.getGameName() + ": " + e.getMessage()); 
+            System.err.println("[ERROR] : Failed to send " + g.getGameName() + ": " + e.getMessage()); 
         }
     }
 
@@ -249,20 +344,24 @@ public class ManagerClient
     private static int promptInt(String label, int current) 
     {
         String res = promptString(label, String.valueOf(current));
-        return Integer.parseInt(res);
+        try { return Integer.parseInt(res); } 
+        catch (NumberFormatException e) { return current; }
     }
 
     private static double promptDouble(String label, double current) 
     {
         String res = promptString(label, String.valueOf(current));
-        return Double.parseDouble(res);
+        try { return Double.parseDouble(res); } 
+        catch (NumberFormatException e) { return current; }
     }
 
     private static List<Game> readGamesFromJson(String path) 
     {
         try 
         {
-            return new ObjectMapper().readValue(new File(path), new TypeReference<List<Game>>() {});
+            File file = new File(path);
+            if (!file.exists()) return new ArrayList<>();
+            return new ObjectMapper().readValue(file, new TypeReference<List<Game>>() {});
         } 
         catch (Exception e) 
         { 
@@ -274,11 +373,13 @@ public class ManagerClient
     {
         try 
         {
-            new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(new File(path), games);
+            File file = new File(path);
+            file.getParentFile().mkdirs();
+            new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(file, games);
         } 
         catch (Exception e) 
         { 
-            e.printStackTrace(); 
+            System.err.println("[ERROR] : Failed to write to JSON: " + e.getMessage());
         }
     }
 }

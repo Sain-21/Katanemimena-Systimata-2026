@@ -29,21 +29,6 @@
   "profit" : 0.0,
   "provider" : "NetEnt"
 }, {
-  "gameName" : "Gonzo's Quest",
-  "stars" : 0.0,
-  "noOfVotes" : 0,
-  "gameLogo" : null,
-  "minBet" : 0.2,
-  "maxBet" : 50.0,
-  "riskLevel" : "low",
-  "hashKey" : null,
-  "betCategory" : "$",
-  "jackpot" : 0,
-  "totalBets" : 0.0,
-  "totalPayouts" : 0.0,
-  "profit" : 0.0,
-  "provider" : "NetEnt"
-}, {
   "gameName" : "Tome of Madness",
   "stars" : 0.0,
   "noOfVotes" : 0,
@@ -64,7 +49,7 @@
   "noOfVotes" : 0,
   "gameLogo" : null,
   "minBet" : 5.0,
-  "maxBet" : 200.0,
+  "maxBet" : 1000.0,
   "riskLevel" : "high",
   "hashKey" : null,
   "betCategory" : "$$$",
@@ -88,4 +73,19 @@
   "totalPayouts" : 0.0,
   "profit" : 0.0,
   "provider" : "Pragmatic"
+}, {
+  "gameName" : "Moon Princess",
+  "stars" : 0.0,
+  "noOfVotes" : 0,
+  "gameLogo" : null,
+  "minBet" : 1.0,
+  "maxBet" : 750.0,
+  "riskLevel" : "medium",
+  "hashKey" : "LaloFroutaSecret",
+  "betCategory" : "$$",
+  "jackpot" : 20,
+  "totalBets" : 0.0,
+  "totalPayouts" : 0.0,
+  "profit" : 0.0,
+  "provider" : "LaloINC"
 } ]
