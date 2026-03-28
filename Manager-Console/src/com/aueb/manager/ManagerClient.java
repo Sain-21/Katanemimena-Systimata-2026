@@ -62,12 +62,31 @@ public class ManagerClient
     {
         System.out.println("\n--- Create New Game ---");
         String name = promptString("Game Name", "");
+        if(name.trim().isEmpty())
+        {
+            System.out.println("Error: Game name cannot be empty!");
+            return;
+        }
         String provider = promptString("Provider", "");
         int stars = promptInt("Stars (0-5)", 0);
+        if(stars < 0 || stars > 5)
+        {
+            System.out.println("Error: Stars must be between 0 and 5!");
+            return;
+        }
         double minBet = promptDouble("Min Bet", 0.1);
         double maxBet = promptDouble("Max Bet", 100.0);
-        String risk = promptString("Risk Level (low/medium/high)", "low");
-
+        if(minBet < 0.1 || maxBet <= minBet)
+        {
+            System.out.println("Error: Invalid bet range! (Min must be >= 0.1 and Max > Min)");
+            return;
+        }
+        String risk = promptString("Risk Level (low/medium/high)", "low").toLowerCase();
+        if(!Arrays.asList("low" , "medium" , "high").contains(risk))
+        {
+            System.out.println("Error: Risk level must be low, medium, or high!");
+            return;
+        }
         Game newGame = new Game(name, provider, stars, 0, null, minBet, maxBet, risk, null);
         sendGameToMaster(newGame);
         try

@@ -6,11 +6,13 @@ public class RateRequest implements Serializable
 {
     private String gameName;
     private int stars;
+    private String playerName;
     
-    public RateRequest(String gameName, int stars) 
+    public RateRequest(String gameName, String playerName , int stars) 
     {
         this.gameName = gameName;
         this.stars = stars;
+        this.playerName = playerName;
     }
 
     public String getGameName() 
@@ -31,6 +33,11 @@ public class RateRequest implements Serializable
     public void setStars(int stars) 
     {
         this.stars = stars;
+    }
+
+    public String getPlayerName()
+    {
+        return playerName;
     }
    
 }

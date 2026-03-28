@@ -169,7 +169,9 @@ class ClientHandler implements Runnable
                 System.out.println("[MASTER] : Received rating for " + rr.getGameName());
 
                 int nodeId = Math.abs(rr.getGameName().hashCode()) % workerPorts.length;
-                forwardToWorker(workerPorts[nodeId], rr, null);
+                Object response = forwardToWorker(workerPorts[nodeId], rr, "Error communicating with worker");
+                out.writeObject(response);
+                out.flush();
             }
 
             //player statistics
@@ -188,6 +190,22 @@ class ClientHandler implements Runnable
                 }
                 System.out.println("[MASTER] Sending partial maps to Reducer...");
 
+                Object reducedStats = MasterServer.sendToReducer(partialMaps);
+                out.writeObject(reducedStats);
+                out.flush();
+            }
+            else if(received instanceof String && received.equals("GET_PROVIDER_STATS"))
+            {
+                System.out.println("[MASTER] : Aggregating provider stats from all workers...");
+                List<Map<String, Double>> partialMaps = new ArrayList<>();
+                for (int port : workerPorts)
+                {
+                    Object response = forwardToWorker(port, "GET_PROVIDER_STATS", null);
+                    if (response instanceof Map)
+                    {
+                        partialMaps.add((Map<String, Double>) response);
+                    }
+                }
                 Object reducedStats = MasterServer.sendToReducer(partialMaps);
                 out.writeObject(reducedStats);
                 out.flush();

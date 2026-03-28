@@ -1,6 +1,8 @@
 package com.aueb.shared;
 
 import java.io.Serializable;
+import java.util.HashSet;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -8,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class Game implements Serializable 
 {
     private static final long serialVersionUID = 1L;
-
+    private HashSet<String> voters = new HashSet<>();
     private String gameName;
 
     @JsonProperty("provider")
@@ -186,11 +188,18 @@ public class Game implements Serializable
         this.totalPayouts += payout;
     }
 
-    public synchronized void addRating(int newStars) 
-    {
+    public synchronized boolean addRating(String playerName , int newStars) 
+    {   
+        if(voters.contains(playerName))
+        {
+            return false;
+        }
+
         double currentTotal = this.stars * this.noOfVotes;
         this.noOfVotes++;
         this.stars = (currentTotal + newStars) / this.noOfVotes;
+        voters.add(playerName);
+        return true;
     }
 
     public double getProfit() 

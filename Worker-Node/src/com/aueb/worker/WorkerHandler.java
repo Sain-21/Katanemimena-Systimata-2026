@@ -30,12 +30,24 @@ public class WorkerHandler implements Runnable
             // add game
             if (received instanceof Game) 
             {
-                Game game = (Game) received;
+                Game newGame = (Game) received;
                 synchronized (gameList) 
                 {
-                    gameList.put(game.getGameName(), game);
+                    if(gameList.containsKey(newGame.getGameName()))
+                    {
+                        Game existing = gameList.get(newGame.getGameName());
+                        existing.setMinBet(newGame.getMinBet());
+                        existing.setMaxBet(newGame.getMaxBet());
+                        existing.setRiskLevel(newGame.getRiskLevel());
+                        existing.setProviderName(newGame.getProviderName());
+                        System.out.println("[WORKER] Updated existing game properties:" + newGame.getGameName());
+                    }
+                    else
+                    {
+                        gameList.put(newGame.getGameName(), newGame);
+                        System.out.println("[WORKER] Added new game to map: " + newGame.getGameName());
+                    }
                 }
-                System.out.println("[WORKER] Saved/Updated game: " + game.getGameName());
                 oos.writeObject("Game Processed Successfully");
             } 
             
@@ -108,11 +120,25 @@ public class WorkerHandler implements Runnable
             else if (received instanceof RateRequest) 
             {
                 RateRequest rr = (RateRequest) received;
+                String responseMessage = "Error: Game not found.";
                 synchronized(gameList) 
                 {
                     Game g = gameList.get(rr.getGameName());
-                    if (g != null) g.addRating(rr.getStars());
+                    if (g != null) 
+                    {
+                        boolean success = g.addRating(rr.getPlayerName(), rr.getStars());
+                        if (success)
+                        {
+                            responseMessage = "Rating submitted successfully! New average: " + String.format("%.1f", g.getStars());
+                        }
+                        else
+                        {
+                            responseMessage = "You have already rated this game!";
+                        }
+                    }
                 }
+                oos.writeObject(responseMessage);
+                oos.flush();
             }
             else if(received instanceof String && received.equals("GET_PROVIDER_STATS"))
             {
@@ -195,9 +221,6 @@ public class WorkerHandler implements Runnable
         }
 
         double playerNetResult = payout - amount;
-        playerNetResult = Math.round(playerNetResult * 100.0) / 100.0;
-
-
             // update local worker map
         synchronized (WorkerServer.playerProfits) 
         {

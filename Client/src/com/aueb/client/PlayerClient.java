@@ -1,6 +1,5 @@
 package com.aueb.client;
 
-import com.aueb.shared.RateRequest;
 import com.aueb.shared.*;
 import java.io.*;
 import java.net.*;
@@ -167,7 +166,11 @@ public class PlayerClient
 
         System.out.print("Bet amount (" + found.getMinBet() + "-" + found.getMaxBet() + "): ");
         double amount = Double.parseDouble(scanner.nextLine());
-
+        if (amount < found.getMinBet() || amount > found.getMaxBet())
+        {
+            System.out.println("Bet must me around: " + found.getMinBet() + " - " + found.getMaxBet());
+            return;
+        }
         if (amount > balance) 
         {
             System.out.println("Error: Aneparkes Ypolipo (Balance: " + balance + ")");
@@ -221,11 +224,14 @@ public class PlayerClient
     private static void sendRating(String gameName, int stars) 
     {
         try (Socket s = new Socket(HOST, PORT);
-             ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream())) 
-             {
-            out.writeObject(new RateRequest(gameName, stars));
+            ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream()); 
+            ObjectInputStream in = new ObjectInputStream(s.getInputStream()))
+        {
+            out.writeObject(new RateRequest(gameName, username, stars));
             out.flush();
-            System.out.println("Thank you for rating!");
+            
+            Object response = in.readObject();
+            System.out.println(response);
         } 
         catch (Exception e) 
         {
