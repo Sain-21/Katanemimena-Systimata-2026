@@ -21,6 +21,7 @@ public class ReducerServer
         }
     }
     
+
     private static void handle(Socket socket)
     {
         try(
@@ -41,25 +42,13 @@ public class ReducerServer
                 }
                 else if (incomingList.get(0) instanceof Map)
                 {
-                    Map<String, Double> reducedMap = new HashMap<>();
-                    for (Object obj : incomingList)
-                    {
-                        Map<String, Double> part = (Map<String, Double>) obj;
-                        for (String key : part.keySet())
-                        {
-                            reducedMap.merge(key, part.get(key), Double::sum);
-                        }
-                    }
+                    Map<String, Double> reducedMap = reduceStats((List<Map<String, Double>>) incomingList);
                     System.out.println("[REDUCER] Stats merged.");
                     out.writeObject(reducedMap);
                 }
                 else if (incomingList.get(0) instanceof List)
                 {
-                    List<Game> combinedGames = new ArrayList<>();
-                    for (Object obj : incomingList)
-                    {
-                        combinedGames.addAll((List<Game>) obj);
-                    }
+                    List<Game> combinedGames = reduceGames((List<List<Game>>) incomingList);
                     System.out.println("[REDUCER] Game lists combined.");
                     out.writeObject(combinedGames);
                 }
@@ -72,4 +61,26 @@ public class ReducerServer
         }
     }
 
+    private static List<Game> reduceGames(List<List<Game>> intermediateLists) 
+    {
+        List<Game> finalResult = new ArrayList<>();
+        for (List<Game> subList : intermediateLists) 
+        {
+            finalResult.addAll(subList);
+        }
+        return finalResult;
+    }
+
+    private static Map<String, Double> reduceStats(List<Map<String, Double>> intermediateMaps) 
+    {
+        Map<String, Double> finalStats = new HashMap<>();
+        for (Map<String, Double> partialMap : intermediateMaps)
+        {
+            for (String key : partialMap.keySet())
+            {
+                finalStats.merge(key, partialMap.get(key), Double::sum);
+            }
+        }
+        return finalStats;
+    }
 }

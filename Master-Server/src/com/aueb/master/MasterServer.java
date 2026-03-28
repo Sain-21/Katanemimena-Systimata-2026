@@ -116,7 +116,14 @@ class ClientHandler implements Runnable
                 if (req.getGameName() != null) 
                 {
                     List<Game> finalList = (List<Game>) reducedResults;
-                    out.writeObject(!finalList.isEmpty() ? finalList.get(0) : "Game not found!");
+                    if(finalList != null && !finalList.isEmpty())
+                    {
+                        out.writeObject(finalList.get(0));
+                    }
+                    else
+                    {
+                        out.writeObject("Game not found!");
+                    }
                 } 
                 else 
                 {
@@ -191,7 +198,14 @@ class ClientHandler implements Runnable
                 System.out.println("[MASTER] Sending partial maps to Reducer...");
 
                 Object reducedStats = MasterServer.sendToReducer(partialMaps);
-                out.writeObject(reducedStats);
+                if(reducedStats == null)
+                {
+                    out.writeObject(new HashMap<String , Double>());
+                }
+                else
+                {
+                    out.writeObject(reducedStats);
+                }
                 out.flush();
             }
             else if(received instanceof String && received.equals("GET_PROVIDER_STATS"))

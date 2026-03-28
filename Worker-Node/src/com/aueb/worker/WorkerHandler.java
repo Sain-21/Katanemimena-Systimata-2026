@@ -74,22 +74,9 @@ public class WorkerHandler implements Runnable
                 SearchRequest req = (SearchRequest) received;
                 List<Game> matches = new ArrayList<>();
             
-                synchronized(gameList) {
-                    for (Game g : gameList.values()) {
-                        // An anazitame sygkekrimeno onoma (playAction)
-                        if (req.getGameName() != null) {
-                            if (g.getGameName().equalsIgnoreCase(req.getGameName())) {
-                                matches.add(g);
-                                break;
-                            }
-                        } 
-                        // alliws filtrarisma me mapreduce kritiria [cite: 69, 71]
-                        else if (g.getStars() >= req.getMinStars() &&
-                                 g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) &&
-                                 g.getBetCategory().equals(req.getBetLimit())) {
-                            matches.add(g);
-                        }
-                    }
+                synchronized(gameList) 
+                {
+                    matches = map(req , gameList.values());
                 }
                 oos.writeObject(matches);
             }
@@ -252,5 +239,28 @@ public class WorkerHandler implements Runnable
         StringBuilder sb = new StringBuilder();
         for (byte b : hashBytes) sb.append(String.format("%02x", b));
         return sb.toString().equals(receivedHash);
+    }
+
+    private List<Game> map(SearchRequest req, Collection<Game> localGames) 
+    {
+        List<Game> intermediateResults = new ArrayList<>();
+        for (Game g : localGames) 
+        {
+            if (req.getGameName() != null) 
+            {
+                if (g.getGameName().equalsIgnoreCase(req.getGameName()))
+                {
+                    intermediateResults.add(g);
+                    break;
+                }
+            } 
+            else if (g.getStars() >= req.getMinStars() &&
+                g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) &&
+                g.getBetCategory().equals(req.getBetLimit()))
+            {
+                intermediateResults.add(g);
+            }
+        }
+        return intermediateResults;
     }
 }
