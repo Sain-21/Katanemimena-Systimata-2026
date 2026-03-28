@@ -40,6 +40,7 @@ public class WorkerHandler implements Runnable
                         existing.setMaxBet(newGame.getMaxBet());
                         existing.setRiskLevel(newGame.getRiskLevel());
                         existing.setProviderName(newGame.getProviderName());
+                        existing.setHashKey(newGame.getHashKey());
                         System.out.println("[WORKER] Updated existing game properties:" + newGame.getGameName());
                     }
                     else
@@ -243,7 +244,7 @@ public class WorkerHandler implements Runnable
     {
         if(secret == null)
         {
-            secret = "defaultSecret";
+            secret = "LaloFroutaSecret";
         }
         String checkStr = num + secret;
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
