@@ -101,17 +101,57 @@ public class PlayerClient
 
     private static void searchWithFilters() 
     {
-        System.out.print("Min Stars (1-5): ");
-        double stars = Double.parseDouble(scanner.nextLine());
+        double stars = 0.0;
+        boolean validStars = false;
+
+        while(!validStars)
+        {
+            System.out.print("Min Stars (1-5): ");
+            String starsInput = scanner.nextLine().trim();
+
+            if(starsInput.isEmpty())
+            {
+                stars = 0.0;
+                validStars = true;
+            }
+            else
+            {
+                try
+                {
+                    stars = Double.parseDouble(starsInput);
+                    if(stars >= 1.0 && stars <=5)
+                    {
+                        validStars = true;
+                    }
+                    else
+                    {
+                        System.out.println("Invalid Choice! Stars must be from 1-5");
+                    }
+                }
+                catch(NumberFormatException e)
+                {
+                    System.out.println("Give a number from 1-5 or press Enter");
+                }
+            }
+        }
+        
         System.out.print("Risk (low, medium, high): ");
-        String risk = scanner.nextLine();
+        String risk = scanner.nextLine().trim();
+        if(risk.isEmpty())
+        {
+            risk = "ALL";
+        }
+
         System.out.print("Bet Limit ($, $$, $$$): ");
-        String limit = scanner.nextLine();
+        String limit = scanner.nextLine().trim();
+        if(limit.isEmpty())
+        {
+            limit = "ALL";
+        }
 
         SearchRequest req = new SearchRequest(username, stars, risk, limit);
 
         // Xrisi thread gia asugxroni ektelesi oste h efarmogi na einai diadrastiki 
-        new Thread(() -> {
             try (Socket socket = new Socket(HOST, PORT);
                  ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
                  ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
@@ -131,8 +171,7 @@ public class PlayerClient
             } catch (Exception e) {
                 System.err.println("Async search error: " + e.getMessage());
             }
-    }).start();
-}
+    }
 
     private static void searchAndPlay() 
     {

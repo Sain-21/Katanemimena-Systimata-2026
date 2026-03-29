@@ -3,8 +3,8 @@
   "stars" : 4.0,
   "noOfVotes" : 1,
   "gameLogo" : null,
-  "minBet" : 50.0,
-  "maxBet" : 100.0,
+  "minBet" : 20.0,
+  "maxBet" : 1500.0,
   "riskLevel" : "medium",
   "hashKey" : null,
   "betCategory" : "$$$",
@@ -13,21 +13,6 @@
   "totalPayouts" : 0.0,
   "profit" : 0.0,
   "provider" : "Play'n GO"
-}, {
-  "gameName" : "Starburst",
-  "stars" : 0.0,
-  "noOfVotes" : 0,
-  "gameLogo" : null,
-  "minBet" : 0.1,
-  "maxBet" : 100.0,
-  "riskLevel" : "low",
-  "hashKey" : null,
-  "betCategory" : "$",
-  "jackpot" : 0,
-  "totalBets" : 0.0,
-  "totalPayouts" : 0.0,
-  "profit" : 0.0,
-  "provider" : "NetEnt"
 }, {
   "gameName" : "Tome of Madness",
   "stars" : 0.0,
@@ -88,4 +73,19 @@
   "totalPayouts" : 0.0,
   "profit" : 0.0,
   "provider" : "LaloINC"
+}, {
+  "gameName" : "Sugar Rush",
+  "stars" : 0.0,
+  "noOfVotes" : 0,
+  "gameLogo" : null,
+  "minBet" : 0.1,
+  "maxBet" : 100.0,
+  "riskLevel" : "low",
+  "hashKey" : "LaloFroutaSecret",
+  "betCategory" : "$",
+  "jackpot" : 10,
+  "totalBets" : 0.0,
+  "totalPayouts" : 0.0,
+  "profit" : 0.0,
+  "provider" : "koff"
 } ]

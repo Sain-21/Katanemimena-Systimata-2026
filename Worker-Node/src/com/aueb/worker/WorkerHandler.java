@@ -72,24 +72,12 @@ public class WorkerHandler implements Runnable
             else if (received instanceof SearchRequest) 
             {
                 SearchRequest req = (SearchRequest) received;
-                List<Game> matches = new ArrayList<>();
-            
-                synchronized(gameList) {
-                    for (Game g : gameList.values()) {
-                        // An anazitame sygkekrimeno onoma (playAction)
-                        if (req.getGameName() != null) {
-                            if (g.getGameName().equalsIgnoreCase(req.getGameName())) {
-                                matches.add(g);
-                                break;
-                            }
-                        } 
-                        // alliws filtrarisma me mapreduce kritiria [cite: 69, 71]
-                        else if (g.getStars() >= req.getMinStars() &&
-                                 g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) &&
-                                 g.getBetCategory().equals(req.getBetLimit())) {
-                            matches.add(g);
-                        }
-                    }
+                List<Game> matches;
+
+                synchronized(gameList)
+                {
+        
+                    matches = map(req, gameList.values());
                 }
                 oos.writeObject(matches);
             }
@@ -263,11 +251,19 @@ public class WorkerHandler implements Runnable
                     break;
                 }
             } 
-            else if (g.getStars() >= req.getMinStars() &&
-                g.getRiskLevel().equalsIgnoreCase(req.getRiskLevel()) &&
-                g.getBetCategory().equals(req.getBetLimit()))
+            else
             {
-                intermediateResults.add(g);
+                boolean starsMatch = (req.getMinStars() == 0.0) || (g.getStars() >= req.getMinStars());
+                boolean riskMatch = req.getRiskLevel().trim().equalsIgnoreCase("ALL") || 
+                g.getRiskLevel().trim().equalsIgnoreCase(req.getRiskLevel().trim());
+                    
+                boolean betMatch = req.getBetLimit().trim().equalsIgnoreCase("ALL") || 
+                g.getBetCategory().trim().equalsIgnoreCase(req.getBetLimit().trim());
+
+                if (starsMatch && riskMatch && betMatch) 
+                {
+                    intermediateResults.add(g);
+                }
             }
         }
         return intermediateResults;
