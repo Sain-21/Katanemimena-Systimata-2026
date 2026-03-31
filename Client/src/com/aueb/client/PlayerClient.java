@@ -111,7 +111,7 @@ public class PlayerClient
 
             if(starsInput.isEmpty())
             {
-                stars = 0.0;
+                stars = -1.0;
                 validStars = true;
             }
             else
@@ -119,18 +119,18 @@ public class PlayerClient
                 try
                 {
                     stars = Double.parseDouble(starsInput);
-                    if(stars >= 1.0 && stars <=5)
+                    if(stars >= 0.0 && stars <=5)
                     {
                         validStars = true;
                     }
                     else
                     {
-                        System.out.println("Invalid Choice! Stars must be from 1-5");
+                        System.out.println("Invalid Choice! Stars must be from 0-5");
                     }
                 }
                 catch(NumberFormatException e)
                 {
-                    System.out.println("Give a number from 1-5 or press Enter");
+                    System.out.println("Give a number from 0-5 or press Enter");
                 }
             }
         }
@@ -181,90 +181,122 @@ public class PlayerClient
     }
 
     private static void playAction(String gameName) 
+{
+    Game found = null;
+    try (Socket s = new Socket(HOST, PORT);
+         ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+         ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
+         {
+        
+        out.writeObject(new SearchRequest(gameName));
+        out.flush();
+        Object resp = in.readObject();
+        if (resp instanceof Game) found = (Game) resp;
+    } 
+    catch (Exception e) 
+    { 
+        return;
+    }
+
+    if (found == null) 
     {
-        Game found = null;
-        try (Socket s = new Socket(HOST, PORT);
-             ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-             ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
-             {
-            
-            out.writeObject(new SearchRequest(gameName));
-            out.flush();
-            Object resp = in.readObject();
-            if (resp instanceof Game) found = (Game) resp;
-        } 
-        catch (Exception e) 
-        { 
-            return;
-        }
+        System.out.println("Game not found!");
+        return;
+    }
 
-        if (found == null) 
-        {
-            System.out.println("Game not found!");
-            return;
-        }
-
+    double amount = 0.0;
+    while (true) 
+    {
         System.out.print("Bet amount (" + found.getMinBet() + "-" + found.getMaxBet() + "): ");
-        double amount = Double.parseDouble(scanner.nextLine());
-        if (amount < found.getMinBet() || amount > found.getMaxBet())
+        String betInput = scanner.nextLine().trim();
+
+        if (betInput.isEmpty()) 
         {
-            System.out.println("Bet must me around: " + found.getMinBet() + " - " + found.getMaxBet());
-            return;
-        }
-        if (amount > balance) 
-        {
-            System.out.println("Error: Aneparkes Ypolipo (Balance: " + balance + ")");
-            return;
+            System.out.println("Invalid bet! You must enter a number.");
+            continue; 
         }
 
-        balance -= amount;
-
-        try (Socket s = new Socket(HOST, PORT);
-             ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-             ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
-             {
-            
-            
-            out.writeObject(new PlayRequest(username, gameName, amount));
-            out.flush();
-
-            Object response = in.readObject();
-
-            if (response instanceof Double) 
-            {
-                double payout = (Double) response;
-                
-                balance += payout; 
-
-                if (payout > amount) 
-                {
-                    System.out.println("WIN! You won " + payout);
-                } 
-                else if (payout == 0) 
-                {
-                    System.out.println("LOST! Better luck next time.");
-                } 
-                else 
-                {
-                    System.out.println("Partial return: " + payout);
-                }
-            }   
-
-            System.out.println("Current Balance: " + balance + " FUN");
-
-            System.out.print("Rate this game (1-5 stars) or press Enter to skip: ");
-            String rate = scanner.nextLine();
-            if (!rate.isEmpty()) 
-            {
-                sendRating(gameName, Integer.parseInt(rate));
-            }
+        try 
+        {
+            amount = Double.parseDouble(betInput);
+            break; // Αν όλα πάνε καλά, βγαίνουμε από το loop
         } 
-        catch (Exception e) 
-        { 
-            balance += amount;
-            e.printStackTrace(); 
+        catch (NumberFormatException e) 
+        {
+            System.out.println("Invalid input! Please enter a valid number.");
         }
     }
+
+    if (amount < found.getMinBet() || amount > found.getMaxBet())
+    {
+        System.out.println("Bet must me around: " + found.getMinBet() + " - " + found.getMaxBet());
+        return;
+    }
+    if (amount > balance) 
+    {
+        System.out.println("Error: Aneparkes Ypolipo (Balance: " + balance + ")");
+        return;
+    }
+
+    balance -= amount;
+
+    try (Socket s = new Socket(HOST, PORT);
+         ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+         ObjectInputStream in = new ObjectInputStream(s.getInputStream())) 
+        {
+        
+        out.writeObject(new PlayRequest(username, found.getGameName(), amount));
+        out.flush();
+
+        Object response = in.readObject();
+
+        if (response instanceof Double) 
+        {
+            double payout = (Double) response;
+            
+            balance += payout; 
+
+            if (payout > amount) 
+            {
+                System.out.println("WIN! You won " + payout);
+            } 
+            else if (payout == 0) 
+            {
+                System.out.println("LOST! Better luck next time.");
+            } 
+            else 
+            {
+                System.out.println("Partial return: " + payout);
+            }
+        } 
+        else if (response instanceof String) 
+        {
+            System.out.println("[SERVER] " + response);
+            balance += amount;
+        }  
+
+        System.out.println("Current Balance: " + balance + " FUN");
+
+        System.out.print("Rate this game (1-5 stars) or press Enter to skip: ");
+        String rate = scanner.nextLine().trim();
+        if (!rate.isEmpty()) 
+        {
+            try 
+            {
+                sendRating(found.getGameName(), Integer.parseInt(rate));
+            } 
+            catch (NumberFormatException e) 
+            {
+                System.out.println("Invalid rating number. Skipped.");
+            }
+        }
+    } 
+    catch (Exception e) 
+    { 
+        balance += amount;
+        e.printStackTrace(); 
+    }
+}
 
     private static void sendRating(String gameName, int stars) 
     {

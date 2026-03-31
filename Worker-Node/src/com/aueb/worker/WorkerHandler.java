@@ -1,5 +1,6 @@
 package com.aueb.worker;
 
+import com.aueb.worker.*;
 import com.aueb.shared.*;
 import java.io.*;
 import java.net.Socket;
@@ -47,6 +48,14 @@ public class WorkerHandler implements Runnable
                     {
                         gameList.put(newGame.getGameName(), newGame);
                         System.out.println("[WORKER] Added new game to map: " + newGame.getGameName());
+
+                        synchronized(WorkerServer.providerProfits)
+                        {
+                            if (!WorkerServer.providerProfits.containsKey(newGame.getProviderName()))
+                            {
+                                WorkerServer.providerProfits.put(newGame.getProviderName(), 0.0);
+                            }
+                        }
                     }
                 }
                 oos.writeObject("Game Processed Successfully");
@@ -219,7 +228,7 @@ public class WorkerHandler implements Runnable
             WorkerServer.providerProfits.merge(game.getProviderName(), providerNetResult, Double::sum);
         }
 
-        System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
+        //System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
         oos.writeObject(Double.valueOf(payout));
         oos.flush();
     }
@@ -253,7 +262,19 @@ public class WorkerHandler implements Runnable
             } 
             else
             {
-                boolean starsMatch = (req.getMinStars() == 0.0) || (g.getStars() >= req.getMinStars());
+                boolean starsMatch;
+                if (req.getMinStars() == -1.0)
+                {
+                    starsMatch = true;
+                }
+                else if (req.getMinStars() == 0.0)
+                {
+                    starsMatch = (g.getStars() == 0.0);
+                }
+                else
+                {
+                    starsMatch = (g.getStars() >= req.getMinStars());
+                }
                 boolean riskMatch = req.getRiskLevel().trim().equalsIgnoreCase("ALL") || 
                 g.getRiskLevel().trim().equalsIgnoreCase(req.getRiskLevel().trim());
                     
