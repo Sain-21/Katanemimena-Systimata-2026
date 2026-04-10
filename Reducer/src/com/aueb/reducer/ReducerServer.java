@@ -17,6 +17,7 @@ public class ReducerServer
         while(true)
         {
             Socket socket = server.accept();
+            //handle each client in a new thread
             new Thread(() -> handle(socket)).start();
         }
     }

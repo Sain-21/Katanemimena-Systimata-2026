@@ -183,7 +183,7 @@ class ClientHandler implements Runnable
             //player statistics
             else if (received instanceof String && received.equals("GET_PLAYER_STATS")) 
             {
-                System.out.println("[MASTER] : Aggregating player stats from all workers...");
+                System.out.println("[MASTER] : Getting player stats from all workers...");
                 List<Map<String, Double>> partialMaps = new ArrayList<>();
 
                 for (int port : workerPorts)
@@ -209,7 +209,7 @@ class ClientHandler implements Runnable
             }
             else if(received instanceof String && received.equals("GET_PROVIDER_STATS"))
             {
-                System.out.println("[MASTER] : Aggregating provider stats from all workers...");
+                System.out.println("[MASTER] : Getting provider stats from all workers...");
                 List<Map<String, Double>> partialMaps = new ArrayList<>();
                 for (int port : workerPorts)
                 {

@@ -24,7 +24,6 @@ public class Game implements Serializable
     private String riskLevel;
     private String hashKey;
 
-    private String betCategory;
     private int jackpot;
     private double totalBets = 0;
     private double totalPayouts = 0;

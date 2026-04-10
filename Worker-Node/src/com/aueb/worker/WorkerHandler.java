@@ -1,6 +1,5 @@
 package com.aueb.worker;
 
-import com.aueb.worker.*;
 import com.aueb.shared.*;
 import java.io.*;
 import java.net.Socket;
@@ -216,7 +215,8 @@ public class WorkerHandler implements Runnable
         }
 
         double playerNetResult = payout - amount;
-            // update local worker map
+
+        // update local worker map
         synchronized (WorkerServer.playerProfits) 
         {
             WorkerServer.playerProfits.merge(playReq.getPlayerName(), playerNetResult, Double::sum);
@@ -228,7 +228,7 @@ public class WorkerHandler implements Runnable
             WorkerServer.providerProfits.merge(game.getProviderName(), providerNetResult, Double::sum);
         }
 
-        //System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
+        System.out.println("[PLAY] : Player: " + playReq.getPlayerName() + " | Game: " + game.getGameName() + " | Profit: " + playerNetResult);
         oos.writeObject(Double.valueOf(payout));
         oos.flush();
     }
@@ -239,6 +239,7 @@ public class WorkerHandler implements Runnable
         {
             secret = "LaloFroutaSecret";
         }
+
         String checkStr = num + secret;
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] hashBytes = digest.digest(checkStr.getBytes(StandardCharsets.UTF_8));
@@ -275,11 +276,8 @@ public class WorkerHandler implements Runnable
                 {
                     starsMatch = (g.getStars() >= req.getMinStars());
                 }
-                boolean riskMatch = req.getRiskLevel().trim().equalsIgnoreCase("ALL") || 
-                g.getRiskLevel().trim().equalsIgnoreCase(req.getRiskLevel().trim());
-                    
-                boolean betMatch = req.getBetLimit().trim().equalsIgnoreCase("ALL") || 
-                g.getBetCategory().trim().equalsIgnoreCase(req.getBetLimit().trim());
+                boolean riskMatch = req.getRiskLevel().trim().equalsIgnoreCase("ALL") || g.getRiskLevel().trim().equalsIgnoreCase(req.getRiskLevel().trim());  
+                boolean betMatch = req.getBetLimit().trim().equalsIgnoreCase("ALL") || g.getBetCategory().trim().equalsIgnoreCase(req.getBetLimit().trim());
 
                 if (starsMatch && riskMatch && betMatch) 
                 {

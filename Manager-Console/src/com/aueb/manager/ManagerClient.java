@@ -101,8 +101,10 @@ public class ManagerClient
         }
 
         List<Game> existingGames = readGamesFromJson(FILE_PATH);
-        for (Game g : existingGames) {
-            if (g.getGameName().equalsIgnoreCase(name)) {
+        for (Game g : existingGames) 
+        {
+            if (g.getGameName().equalsIgnoreCase(name)) 
+            {
                 System.out.println("[ERROR] : A game with this name already exists in JSON!");
                 return;
             }
@@ -282,8 +284,7 @@ public class ManagerClient
             if (g.getGameName().equalsIgnoreCase(name)) 
             {
                 System.out.println("\nEditing Game: " + g.getGameName());
-                System.out.println("(Game Name cannot be changed. Delete and re-create if needed.)");
-                
+                g.setGameName(promptString("New Game Name", g.getGameName()));
                 g.setMinBet(promptDouble("New Min Bet", g.getMinBet()));
                 g.setMaxBet(promptDouble("New Max Bet", g.getMaxBet()));
                 g.setRiskLevel(promptString("New Risk (low/medium/high)", g.getRiskLevel()));
@@ -334,6 +335,7 @@ public class ManagerClient
         }
     }
 
+    //helper functions gia print apo json kai input
     private static String promptString(String label, String current) 
     {
         System.out.print(label + (current.isEmpty() ? "" : " [" + current + "]") + ": ");

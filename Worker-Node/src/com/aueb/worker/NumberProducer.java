@@ -40,7 +40,11 @@ public class NumberProducer implements Runnable
             }
             catch(Exception e)
             {
-                try { Thread.sleep(2000); } catch (InterruptedException ie) {}
+                try 
+                { 
+                    Thread.sleep(2000); 
+                } 
+                catch (InterruptedException ie) {}
             }
         }
     }
