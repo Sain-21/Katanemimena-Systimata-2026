@@ -284,11 +284,13 @@ public class ManagerClient
             if (g.getGameName().equalsIgnoreCase(name)) 
             {
                 System.out.println("\nEditing Game: " + g.getGameName());
+                String oldName = g.getGameName();
                 g.setGameName(promptString("New Game Name", g.getGameName()));
                 g.setMinBet(promptDouble("New Min Bet", g.getMinBet()));
                 g.setMaxBet(promptDouble("New Max Bet", g.getMaxBet()));
                 g.setRiskLevel(promptString("New Risk (low/medium/high)", g.getRiskLevel()));
                 
+                removeGameOnMaster(oldName);
                 writeGamesToJson(FILE_PATH, games);
                 sendGameToMaster(g);
                 
@@ -382,6 +384,24 @@ public class ManagerClient
         catch (Exception e) 
         { 
             System.err.println("[ERROR] : Failed to write to JSON: " + e.getMessage());
+        }
+    }
+
+    private static void removeGameOnMaster(String gameName)
+    {
+        try(Socket socket = new Socket("localhost", 1312);
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream()))
+        {
+            out.writeObject(new RemoveGameRequest(gameName));
+            out.flush();
+
+            Object response = in.readObject();
+            System.out.println("[MANAGER] Remove response: " + response);
+        }
+        catch(Exception e)
+        {
+            System.err.println("[ERROR] Failed to remove game: " + e.getMessage());
         }
     }
 }

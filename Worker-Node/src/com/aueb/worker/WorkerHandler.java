@@ -40,7 +40,6 @@ public class WorkerHandler implements Runnable
                         existing.setMaxBet(newGame.getMaxBet());
                         existing.setRiskLevel(newGame.getRiskLevel());
                         existing.setProviderName(newGame.getProviderName());
-                        existing.setHashKey(newGame.getHashKey());
                         System.out.println("[WORKER] Updated existing game properties:" + newGame.getGameName());
                     }
                     else
@@ -64,12 +63,27 @@ public class WorkerHandler implements Runnable
             else if (received instanceof RemoveGameRequest) 
             {
                 RemoveGameRequest req = (RemoveGameRequest) received;
-                synchronized (gameList) {
-                    if (gameList.remove(req.getGameName()) != null) 
+                synchronized (gameList) 
+                {
+                    Game removedGame = gameList.remove(req.getGameName());
+
+                    if(removedGame != null)
                     {
+                        String provider = removedGame.getProviderName();
+
+                        boolean providerExists = false;
+                        for(Game g : gameList.values())
+                        {
+                            if(g.getProviderName() != null && g.getProviderName().equalsIgnoreCase(provider))
+                            {
+                                providerExists = true;
+                                break;
+                            }
+                        }
+
                         oos.writeObject("Game Removed!");
-                    } 
-                    else 
+                    }
+                    else
                     {
                         oos.writeObject("Game not found!");
                     }
@@ -86,24 +100,8 @@ public class WorkerHandler implements Runnable
                 {
                     matches = map(req, gameList.values());
                 }
-
-                try
-                {
-                    Socket reducerSocket = new Socket("localhost", 7000);
-                    ObjectOutputStream rout = new ObjectOutputStream(reducerSocket.getOutputStream());
-                    //stelnoume to ID tis anazitisis kai ti lista me ta eurumata
-                    Object[] messageForReducer = new Object[]{ req.getRequestId(), matches };
-                    rout.writeObject(messageForReducer);
-                    rout.flush();
-                    reducerSocket.close();
-                    //CONFIRMATION
-                    oos.writeObject("ACK: Data sent to Reducer");
-                }
-                catch(Exception e)
-                {
-                    System.err.println("[WORKER] Error sending to Reducer: " + e.getMessage());
-                    oos.writeObject("ERROR: Reducer unreachable");
-                }
+                oos.writeObject(matches);
+                oos.flush();
             }
 
             // game list

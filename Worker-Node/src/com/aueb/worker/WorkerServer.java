@@ -9,7 +9,6 @@ import java.util.ArrayList;
 
 public class WorkerServer 
 {
-    public static ArrayList<String[]> numberBuffer = new ArrayList<>();
     public static final Object lock = new Object();
     public static HashMap<String , Double> playerProfits = new HashMap<>();
     public static HashMap<String, Double> providerProfits = new HashMap<>();
@@ -28,7 +27,6 @@ public class WorkerServer
 
         // read arg
         int port = Integer.parseInt(args[0]); 
-        new Thread(new NumberProducer(numberBuffer , lock)).start();
         System.out.println("[WORKER-" + port + "] : Worker Server is starting...");
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {

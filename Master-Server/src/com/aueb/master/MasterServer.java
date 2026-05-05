@@ -40,7 +40,7 @@ public class MasterServer
         }
     }
 
-    public static Object sendToReducer(Object data)
+    public static Object sendToReducer(Object data , String requestId)
     {
         try(
             Socket rs = new Socket("localhost", REDUCER_PORT);
@@ -48,7 +48,7 @@ public class MasterServer
             ObjectInputStream in = new ObjectInputStream(rs.getInputStream());
         )
         {
-            out.writeObject(data);
+            out.writeObject(new Object[]{requestId, data});
             out.flush();
 
             return in.readObject();
@@ -85,17 +85,15 @@ class ClientHandler implements Runnable
                 Game game = (Game) received;
                 System.out.println("[MASTER] : Received game: " + game.getGameName());
                 
-                try
-                {
-                    Socket srgSocket = new Socket("localhost" , 6000);
+                try(Socket srgSocket = new Socket("localhost", 6000);
                     ObjectOutputStream srgOut = new ObjectOutputStream(srgSocket.getOutputStream());
-
-                    //stelneis aitima: add_name , onoma , secret(hashkey)
-                    srgOut.writeObject(new String[]{"ADD_GAME" , game.getGameName() , game.getHashKey()});
+                     ObjectInputStream srgIn = new ObjectInputStream(srgSocket.getInputStream()))
+                {
+                    srgOut.writeObject(new String[]{"ADD_GAME", game.getGameName(), game.getHashKey()});
                     srgOut.flush();
 
-                    srgSocket.close();
-                    System.out.println("[MASTER] : SRG queue initialized for " + game.getGameName());
+                    Object ack = srgIn.readObject();
+                    System.out.println("[MASTER] : SRG response for " + game.getGameName() + " => " + ack);
                 }
                 catch (Exception e)
                 {
@@ -115,18 +113,15 @@ class ClientHandler implements Runnable
             else if (received instanceof SearchRequest) 
             {
                 SearchRequest req = (SearchRequest) received;
-                List<List<Game>> finalResults = new ArrayList<>();
+                List<Object> partialResults = new ArrayList<>();
             
                 for (int port : workerPorts) 
                 {
                     Object response = forwardToWorker(port, req, null);
-                    if (response instanceof List) 
-                    {
-                        finalResults.add((List<Game>) response);
-                    }
+                    partialResults.add(response);
                 }
 
-                Object reducedResults = MasterServer.sendToReducer(finalResults);
+                Object reducedResults = MasterServer.sendToReducer(partialResults , "SEARCH_REQUEST_" + System.currentTimeMillis());
             
                 if (req.getGameName() != null) 
                 {
@@ -151,9 +146,17 @@ class ClientHandler implements Runnable
             else if (received instanceof RemoveGameRequest)
             {
                 RemoveGameRequest req = (RemoveGameRequest) received;
-                int nodeId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
-                Object response = forwardToWorker(workerPorts[nodeId], req, null);
-                out.writeObject(response);
+                boolean removed = false;
+
+                for(int port : workerPorts)
+                {
+                    Object response = forwardToWorker(port, req, null);
+                    if("Game Removed!".equals(response))
+                    {
+                        removed = true;
+                    }
+                }
+                out.writeObject(removed ? "Game Removed!" : "Game not found!");
                 out.flush();
             }
 
@@ -169,7 +172,7 @@ class ClientHandler implements Runnable
                         allWorkerLists.add((List<Game>) resp);
                     }
                 }
-                Object reduced = MasterServer.sendToReducer(allWorkerLists);
+                Object reduced = MasterServer.sendToReducer(allWorkerLists , "LIST_GAMES_REQUEST_" + System.currentTimeMillis());
                 out.writeObject(reduced);
                 out.flush();
             }
@@ -212,7 +215,7 @@ class ClientHandler implements Runnable
                 }
                 System.out.println("[MASTER] Sending partial maps to Reducer...");
 
-                Object reducedStats = MasterServer.sendToReducer(partialMaps);
+                Object reducedStats = MasterServer.sendToReducer(partialMaps , "GET_PLAYERS_STATS_REQUEST_" + System.currentTimeMillis());
                 if(reducedStats == null)
                 {
                     out.writeObject(new HashMap<String , Double>());
@@ -235,7 +238,7 @@ class ClientHandler implements Runnable
                         partialMaps.add((Map<String, Double>) response);
                     }
                 }
-                Object reducedStats = MasterServer.sendToReducer(partialMaps);
+                Object reducedStats = MasterServer.sendToReducer(partialMaps , "GET_PROVIDER_STATS_REQUEST_" + System.currentTimeMillis());
                 out.writeObject(reducedStats);
                 out.flush();
             }

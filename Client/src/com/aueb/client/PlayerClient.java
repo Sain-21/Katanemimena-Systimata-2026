@@ -57,8 +57,7 @@ public class PlayerClient
 
     private static void addBalance() 
     {
-        System.out.print("Posa Tokens Thelete na Prosthesete; ");
-        double amount = Double.parseDouble(scanner.nextLine());
+        double amount = readDoubleSafe("Posa Tokens Thelete na Prosthesete? ");
         balance += amount;
         System.out.println("Epitixis Katathesi! Neo Balance: " + balance);
     }
@@ -265,7 +264,7 @@ public class PlayerClient
 
                 if (payout > amount) 
                 {
-                    System.out.println("WIN! You won " + payout);
+                    System.out.printf("WIN! You won %.2f%n" , payout);
                 } 
                 else if (payout == 0) 
                 {
@@ -320,6 +319,23 @@ public class PlayerClient
         catch (Exception e) 
         {
             System.out.println("Rating failed.");
+        }
+    }
+
+    private static double readDoubleSafe(String message)
+    {
+        while (true)
+        {
+            System.out.print(message + ": ");
+            String input = scanner.nextLine();
+            try
+            {
+                return Double.parseDouble(input);
+            }
+            catch(NumberFormatException e)
+            {
+                System.out.println("[ERROR] : Please enter a valid number.");
+            }
         }
     }
 }

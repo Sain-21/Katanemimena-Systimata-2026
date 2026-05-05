@@ -55,6 +55,14 @@ public class RandomGeneratorServer {
                 {
                     final String name = reqArray[1];
                     final String secret = reqArray[2];
+                    synchronized(queues)
+                    {
+                        if(queues.containsKey(name))
+                        {
+                            out.writeObject("ALREADY_EXISTS");
+                            return;
+                        }
+                    }
                     final ArrayList<String[]>queue = new ArrayList<String[]>();
 
                     synchronized(queues)

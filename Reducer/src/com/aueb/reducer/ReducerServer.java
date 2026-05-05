@@ -34,82 +34,46 @@ public class ReducerServer
 
     private static void handle(Socket s)
     {
-        try
+        try(ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+            ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+        )
         {
-            ObjectInputStream in = new ObjectInputStream(s.getInputStream());
             Object[] data = (Object[]) in.readObject();
 
-            final String requestId = (String) data[0];
-            Object partialData = data[1];
+            String requestId = (String) data[0];
+            List<Object> partialResults =(List<Object>) data[1];
 
-            synchronized(pendingResults)
+            Object finalResult;
+
+            if(requestId.startsWith("GET_PLAYER_STATS") || requestId.startsWith("GET_PROVIDER_STATS"))
             {
-                if (!pendingResults.containsKey(requestId))
+                Map<String, Double> mergedMap = new HashMap<>();
+                for (Object obj : partialResults)
                 {
-                    pendingResults.put(requestId, new ArrayList<Object>());
+                    Map<String , Double> map = (Map<String , Double>) obj;
+                    for (Map.Entry<String, Double> e : map.entrySet())
+                    {
+                         mergedMap.merge(e.getKey(), e.getValue(), Double::sum);
+                    }
                 }
-                pendingResults.get(requestId).add(partialData);
-
-                //An pirame apotelesmata apo olous tous workers
-                if (pendingResults.get(requestId).size() == TOTAL_WORKERS)
-                {
-                    //elegxoume ti tupou einai ta dedomena (apo to 1o stoixeio)
-                    Object firstItem = pendingResults.get(requestId).get(0);
-                    Object finalResult = null;
-
-                    if (firstItem instanceof List)
-                    {
-                        //anazitisi paixnidiou -> reduce listes
-                        List<Game> finalMatches = new ArrayList<>();
-                        for (Object workerList : pendingResults.get(requestId))
-                        {
-                            finalMatches.addAll((List<Game>) workerList);
-                        }
-                        finalResult = finalMatches;
-                    }
-                    else if (firstItem instanceof Map)
-                    {
-                        //einai statistika -> reduce ta maps
-                        Map<String, Double> finalStats = new HashMap<>();
-                        for (Object workerMap : pendingResults.get(requestId))
-                        {
-                            Map<String, Double> partialMap = (Map<String, Double>) workerMap;
-                            for (String key : partialMap.keySet())
-                            {
-                                finalStats.merge(key, partialMap.get(key), Double::sum);
-                            }
-                        }
-                        finalResult = finalStats;
-                    }
-                    if (finalResult != null)
-                    {
-                        sendToMaster(requestId, finalResult);
-                    }
-                    pendingResults.remove(requestId);
-                }
+                 finalResult = mergedMap;
             }
-            s.close();
+            else
+            {
+                List<Game> merged = new ArrayList<>();
+                for(Object obj : partialResults)
+                {
+                    List<Game> list = (List<Game>) obj;
+                    merged.addAll(list);
+                }
+                finalResult = merged;
+            }
+            out.writeObject(finalResult);
+            out.flush();
         }
         catch(Exception e)
         {
             e.printStackTrace();
-        }
-    }
-
-    private static void sendToMaster(String requestId, Object finalResult)
-    {
-        try
-        {
-            Socket masterSocket = new Socket("localhost", 1312);
-            ObjectOutputStream out = new ObjectOutputStream(masterSocket.getOutputStream());
-            out.writeObject(new Object[]{requestId, finalResult});
-            out.flush();
-            masterSocket.close();
-            System.out.println("[REDUCER] Sent final results to Master for Request: " + requestId);
-        }
-        catch(Exception e)
-        {
-            System.err.println("[REDUCER] Could not reach Master on port 1312: " + e.getMessage());
         }
     }
 }
