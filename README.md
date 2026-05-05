@@ -7,7 +7,7 @@
 dir /s /B *.java > sources.txt
 javac -cp "Lib\*;Shared\src" @sources.txt
 
-1. Run
+2. Run
    
 SRG: java -cp "Lib\*;Shared\src;Random-Generator-Server\src" com.aueb.srg.RandomGeneratorServer
 
