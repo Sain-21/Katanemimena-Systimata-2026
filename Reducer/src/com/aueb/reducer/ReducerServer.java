@@ -9,6 +9,10 @@ import com.aueb.shared.Game;
 public class ReducerServer
 {
     private static final int PORT = 7000;
+    //HashMap pou krataei to requestId kai tis listes apo tous workers
+    private static HashMap<String, ArrayList<Object>> pendingResults = new HashMap<>();
+    private static final int TOTAL_WORKERS = 2;
+
     public static void main(String[] args) throws Exception
     {
         ServerSocket server = new ServerSocket(PORT);
@@ -16,72 +20,96 @@ public class ReducerServer
 
         while(true)
         {
-            Socket socket = server.accept();
-            //handle each client in a new thread
-            new Thread(() -> handle(socket)).start();
+            final Socket s = server.accept();
+            Thread t = new Thread(new Runnable() {
+                public void run() 
+                {
+                    handle(s);
+                }
+            });
+            t.start();
         }
     }
     
 
-    private static void handle(Socket socket)
+    private static void handle(Socket s)
     {
-        try(
-            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-        )
+        try
         {
-            Object data = in.readObject();
-            System.out.println("[REDUCER] Received: " + data.getClass().getSimpleName());
+            ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+            Object[] data = (Object[]) in.readObject();
 
-            if (data instanceof List)
+            final String requestId = (String) data[0];
+            Object partialData = data[1];
+
+            synchronized(pendingResults)
             {
-                List<?> incomingList = (List<?>) data;
+                if (!pendingResults.containsKey(requestId))
+                {
+                    pendingResults.put(requestId, new ArrayList<Object>());
+                }
+                pendingResults.get(requestId).add(partialData);
 
-                if (incomingList.isEmpty())
+                //An pirame apotelesmata apo olous tous workers
+                if (pendingResults.get(requestId).size() == TOTAL_WORKERS)
                 {
-                    out.writeObject(incomingList);
-                }
-                else if (incomingList.get(0) instanceof Map)
-                {
-                    Map<String, Double> reducedMap = reduceStats((List<Map<String, Double>>) incomingList);
-                    System.out.println("[REDUCER] Stats merged.");
-                    out.writeObject(reducedMap);
-                }
-                else if (incomingList.get(0) instanceof List)
-                {
-                    List<Game> combinedGames = reduceGames((List<List<Game>>) incomingList);
-                    System.out.println("[REDUCER] Game lists combined.");
-                    out.writeObject(combinedGames);
+                    //elegxoume ti tupou einai ta dedomena (apo to 1o stoixeio)
+                    Object firstItem = pendingResults.get(requestId).get(0);
+                    Object finalResult = null;
+
+                    if (firstItem instanceof List)
+                    {
+                        //anazitisi paixnidiou -> reduce listes
+                        List<Game> finalMatches = new ArrayList<>();
+                        for (Object workerList : pendingResults.get(requestId))
+                        {
+                            finalMatches.addAll((List<Game>) workerList);
+                        }
+                        finalResult = finalMatches;
+                    }
+                    else if (firstItem instanceof Map)
+                    {
+                        //einai statistika -> reduce ta maps
+                        Map<String, Double> finalStats = new HashMap<>();
+                        for (Object workerMap : pendingResults.get(requestId))
+                        {
+                            Map<String, Double> partialMap = (Map<String, Double>) workerMap;
+                            for (String key : partialMap.keySet())
+                            {
+                                finalStats.merge(key, partialMap.get(key), Double::sum);
+                            }
+                        }
+                        finalResult = finalStats;
+                    }
+                    if (finalResult != null)
+                    {
+                        sendToMaster(requestId, finalResult);
+                    }
+                    pendingResults.remove(requestId);
                 }
             }
-            out.flush();
+            s.close();
         }
         catch(Exception e)
         {
-            System.err.println("[REDUCER ERROR] : " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private static List<Game> reduceGames(List<List<Game>> intermediateLists) 
+    private static void sendToMaster(String requestId, Object finalResult)
     {
-        List<Game> finalResult = new ArrayList<>();
-        for (List<Game> subList : intermediateLists) 
+        try
         {
-            finalResult.addAll(subList);
+            Socket masterSocket = new Socket("localhost", 1312);
+            ObjectOutputStream out = new ObjectOutputStream(masterSocket.getOutputStream());
+            out.writeObject(new Object[]{requestId, finalResult});
+            out.flush();
+            masterSocket.close();
+            System.out.println("[REDUCER] Sent final results to Master for Request: " + requestId);
         }
-        return finalResult;
-    }
-
-    private static Map<String, Double> reduceStats(List<Map<String, Double>> intermediateMaps) 
-    {
-        Map<String, Double> finalStats = new HashMap<>();
-        for (Map<String, Double> partialMap : intermediateMaps)
+        catch(Exception e)
         {
-            for (String key : partialMap.keySet())
-            {
-                finalStats.merge(key, partialMap.get(key), Double::sum);
-            }
+            System.err.println("[REDUCER] Could not reach Master on port 1312: " + e.getMessage());
         }
-        return finalStats;
     }
 }

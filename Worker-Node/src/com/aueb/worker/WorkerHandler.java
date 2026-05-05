@@ -81,13 +81,29 @@ public class WorkerHandler implements Runnable
             {
                 SearchRequest req = (SearchRequest) received;
                 List<Game> matches;
-
+                
                 synchronized(gameList)
                 {
-        
                     matches = map(req, gameList.values());
                 }
-                oos.writeObject(matches);
+
+                try
+                {
+                    Socket reducerSocket = new Socket("localhost", 7000);
+                    ObjectOutputStream rout = new ObjectOutputStream(reducerSocket.getOutputStream());
+                    //stelnoume to ID tis anazitisis kai ti lista me ta eurumata
+                    Object[] messageForReducer = new Object[]{ req.getRequestId(), matches };
+                    rout.writeObject(messageForReducer);
+                    rout.flush();
+                    reducerSocket.close();
+                    //CONFIRMATION
+                    oos.writeObject("ACK: Data sent to Reducer");
+                }
+                catch(Exception e)
+                {
+                    System.err.println("[WORKER] Error sending to Reducer: " + e.getMessage());
+                    oos.writeObject("ERROR: Reducer unreachable");
+                }
             }
 
             // game list
@@ -174,24 +190,31 @@ public class WorkerHandler implements Runnable
             return;
         }
 
-        //get number from buffer(srg)
-        String[] srgData;
-        synchronized (WorkerServer.lock) 
+        String[] srgData = null;
+        try (Socket srgSocket = new Socket("localhost", 6000);
+            ObjectOutputStream srgOut = new ObjectOutputStream(srgSocket.getOutputStream());
+            ObjectInputStream srgIn = new ObjectInputStream(srgSocket.getInputStream()))
         {
-            while (WorkerServer.numberBuffer.isEmpty()) 
-            {
-                System.out.println("[WORKER] : Waiting for SRG numbers...");
-                WorkerServer.lock.wait();
-            }
-            srgData = WorkerServer.numberBuffer.remove(0);
-            WorkerServer.lock.notifyAll();
+            //stelneis mono to onoma tou game
+            srgOut.writeObject(game.getGameName());
+            srgOut.flush();
+
+            //perneis piso [arithmos , hash]
+            srgData = (String[])srgIn.readObject();
         }
+        catch(Exception e)
+        {
+            System.err.println("[WORKER] SRG Error: " + e.getMessage());
+            oos.writeObject("[ERROR] : Random Generator is offline.");
+            return;
+        }
+
+        if(srgData == null) return;
 
         int randomNumber = Integer.parseInt(srgData[0]);
         String receivedHash = srgData[1];
 
-        //hash verify
-        if (!verifyHash(randomNumber, receivedHash , game.getHashKey())) 
+        if(!verifyHash(randomNumber , receivedHash , game.getHashKey()))
         {
             oos.writeObject("[ERROR] : Manipulated number detected!");
             return;
@@ -235,10 +258,10 @@ public class WorkerHandler implements Runnable
 
     private boolean verifyHash(int num, String receivedHash , String secret) throws Exception 
     {
-        if(secret == null)
-        {
-            secret = "LaloFroutaSecret";
-        }
+        //if(secret == null)
+        //{
+        //    secret = "LaloFroutaSecret";
+        //}
 
         String checkStr = num + secret;
         MessageDigest digest = MessageDigest.getInstance("SHA-256");

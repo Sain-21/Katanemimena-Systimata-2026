@@ -84,7 +84,23 @@ class ClientHandler implements Runnable
             {
                 Game game = (Game) received;
                 System.out.println("[MASTER] : Received game: " + game.getGameName());
+                
+                try
+                {
+                    Socket srgSocket = new Socket("localhost" , 6000);
+                    ObjectOutputStream srgOut = new ObjectOutputStream(srgSocket.getOutputStream());
 
+                    //stelneis aitima: add_name , onoma , secret(hashkey)
+                    srgOut.writeObject(new String[]{"ADD_GAME" , game.getGameName() , game.getHashKey()});
+                    srgOut.flush();
+
+                    srgSocket.close();
+                    System.out.println("[MASTER] : SRG queue initialized for " + game.getGameName());
+                }
+                catch (Exception e)
+                {
+                    System.err.println("[MASTER] : SRG communication error: " + e.getMessage());
+                }
                 int nodeId = Math.abs(game.getGameName().hashCode()) % workerPorts.length;
                 int targetPort = workerPorts[nodeId];
 
