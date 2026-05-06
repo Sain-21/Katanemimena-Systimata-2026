@@ -1,52 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="20dp"
+    android:padding="24dp"
+    android:background="#FFFFFF"
     android:gravity="center_horizontal">
 
+    <!-- 1. Banner -->
+    <ImageView
+        android:id="@+id/bannerImage"
+        android:layout_width="match_parent"
+        android:layout_height="178dp"
+        android:layout_marginBottom="16dp"
+        android:contentDescription="Casino Banner"
+        android:scaleType="centerCrop"
+        android:src="@drawable/casinolalobanner" />
+
+    <!-- 1. Username -->
     <TextView
-        android:id="@+id/tvTitle"
+        android:id="@+id/tvWelcomeUser"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="=== CasinoLalo ==="
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="20dp"/>
+        android:text="Username: Guest"
+        android:textColor="#000000"
+        android:textSize="20sp"
+        android:textStyle="bold" />
 
+    <!-- 2. Balance -->
     <TextView
         android:id="@+id/tvBalance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Balance: 0.0 FUN"
-        android:textSize="18sp"
-        android:layout_marginBottom="10dp"/>
+        android:text="Balance: 0.00"
+        android:textColor="#2E7D32"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="24dp"/>
 
-    <Button
-        android:id="@+id/btnAddBalance"
+    <!-- 4. Add Tokens Buttons -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Προσθηκη 100 Tokens" />
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnAdd100Tokens"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="+100 Tokens" />
+
+        <Button
+            android:id="@+id/btnAddCustomTokens"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="+ Custom" />
+    </LinearLayout>
 
     <Button
         android:id="@+id/btnViewAll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Προβολη Ολων των Παιχνιδιων"
-        android:layout_marginBottom="10dp"/>
+        android:text="View All Games"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="16dp"/>
 
-    <!-- Εδώ θα μπαίνουν τα παιχνίδια και θα μπορούμε να σκρολάρουμε -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Διαθέσιμα Παιχνίδια:"
+        android:textColor="#000000"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Λίστα Παιχνιδιών -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
-
         <LinearLayout
             android:id="@+id/gamesContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal" />
     </ScrollView>
+
+    <!-- 3. Κουμπί Logout κάτω κάτω -->
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Logout"
+        android:backgroundTint="#D32F2F"
+        android:textColor="#FFFFFF"
+        android:paddingStart="48dp"
+        android:paddingEnd="48dp"
+        android:layout_marginTop="16dp"/>
 
 </LinearLayout>

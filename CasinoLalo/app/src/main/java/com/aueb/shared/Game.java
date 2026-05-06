@@ -197,6 +197,10 @@ public class Game implements Serializable
         return true;
     }
 
+    public boolean hasVoted(String playerName) {
+        return voters.contains(playerName);
+    }
+
     public double getProfit() 
     {
         return this.totalBets - this.totalPayouts;
