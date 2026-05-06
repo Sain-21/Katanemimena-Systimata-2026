@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/dark_bg">
+
+    <!-- Header with Balance -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/tvDetailBalance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Credits: 0.00"
+            android:textColor="@color/casino_gold"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_alignParentEnd="true"/>
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/ivGameDetailIcon"
+                android:layout_width="140dp"
+                android:layout_height="140dp"
+                android:src="@drawable/ic_launcher_foreground"
+                android:scaleType="centerInside"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
+                android:contentDescription="Game Icon"/>
+
+            <TextView
+                android:id="@+id/tvGameDetailName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Game Name"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="2dp"/>
+
+            <TextView
+                android:id="@+id/tvGameDetailStats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Risk: High | ⭐⭐⭐⭐⭐"
+                android:textColor="@color/casino_gold"
+                android:textSize="14sp"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:id="@+id/tvGameDetailLimits"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Limits: 10.0 - 1000.0"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp"/>
+
+            <EditText
+                android:id="@+id/etBetAmount"
+                android:layout_width="160dp"
+                android:layout_height="wrap_content"
+                android:hint="Bet Amount"
+                android:inputType="numberDecimal"
+                android:textColor="@color/white"
+                android:textColorHint="@color/text_secondary"
+                android:backgroundTint="@color/casino_gold"
+                android:gravity="center"
+                android:padding="10dp"
+                android:layout_marginBottom="12dp"/>
+
+            <Button
+                android:id="@+id/btnPlayAction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="PLAY NOW"
+                android:backgroundTint="@color/casino_gold"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- Auto Play Switch -->
+            <CheckBox
+                android:id="@+id/cbAutoPlay"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AUTO PLAY MODE"
+                android:textColor="@color/white"
+                android:buttonTint="@color/casino_gold"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- History Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="HISTORY"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Scrollable History -->
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:background="@color/dark_card"
+                android:padding="4dp">
+
+                <LinearLayout
+                    android:id="@+id/historyContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal" />
+
+            </ScrollView>
+
+            <Button
+                android:id="@+id/btnRateGame"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RATE GAME"
+                android:backgroundTint="@color/dark_card"
+                android:textColor="@color/casino_gold"
+                android:layout_marginTop="16dp"
+                android:textSize="12sp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnBackToGames"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="EXIT"
+        android:backgroundTint="@color/casino_red"
+        android:textColor="@color/white"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>
