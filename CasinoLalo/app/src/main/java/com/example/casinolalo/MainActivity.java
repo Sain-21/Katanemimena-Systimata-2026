@@ -2,6 +2,10 @@ package com.example.casinolalo;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
@@ -29,6 +33,9 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout gamesContainer;
     private double balance = 0.0;
     private String username = "Guest";
+    private Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private Runnable refreshRunnable;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,23 +88,46 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // --- 3. Λήψη Παιχνιδιών ---
-        btnViewAll.setOnClickListener(v -> {
-            NetworkManager.fetchAllGames(new NetworkManager.GameListCallback() {
-                @Override
-                public void onSuccess(List<Game> games) {
-                    runOnUiThread(() -> {
-                        gamesContainer.removeAllViews();
-                        for (Game game : games) {
-                            addGameToUI(game);
-                        }
-                    });
-                }
+        btnViewAll.setOnClickListener(v -> refreshGamesList());
 
-                @Override
-                public void onError(String errorMsg) {
-                    runOnUiThread(() -> showErrorDialog("Σφάλμα Δικτύου", errorMsg));
-                }
-            });
+        // Αρχική φόρτωση
+        refreshGamesList();
+
+        // --- 4. Auto Refresh κάθε 5 δευτερόλεπτα για να πιάνουμε αλλαγές στο JSON ---
+        refreshRunnable = new Runnable() {
+            @Override
+            public void run() {
+                refreshGamesList();
+                refreshHandler.postDelayed(this, 5000); // 5 δευτερόλεπτα για γρήγορη απόκριση
+            }
+        };
+        refreshHandler.postDelayed(refreshRunnable, 5000);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (refreshHandler != null && refreshRunnable != null) {
+            refreshHandler.removeCallbacks(refreshRunnable);
+        }
+    }
+
+    private void refreshGamesList() {
+        NetworkManager.fetchAllGames(new NetworkManager.GameListCallback() {
+            @Override
+            public void onSuccess(List<Game> games) {
+                runOnUiThread(() -> {
+                    gamesContainer.removeAllViews();
+                    for (Game game : games) {
+                        addGameToUI(game);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String errorMsg) {
+                runOnUiThread(() -> showErrorDialog("Σφάλμα Δικτύου", errorMsg));
+            }
         });
     }
 
@@ -128,13 +158,13 @@ public class MainActivity extends AppCompatActivity {
         params.gravity = android.view.Gravity.CENTER_HORIZONTAL;
         gameBtn.setLayoutParams(params);
         
-        gameBtn.setOnClickListener(view -> showPlayDialog(game, gameBtn));
+        gameBtn.setOnClickListener(view -> showPlayDialog(game));
         gamesContainer.addView(gameBtn);
     }
 
     // Ενημέρωση του UI για το υπόλοιπο (ΠΑΝΤΑ 2 δεκαδικά)
     private void updateBalanceUI() {
-        tvBalance.setText(String.format(Locale.US, "Balance: %.2f FUN", balance));
+        tvBalance.setText(String.format(Locale.US, "Balance: %.2f", balance));
         // Μόνο αν δεν είναι Guest αποθηκεύουμε
         if (!"Guest".equals(username)) {
             saveUserBalance();
@@ -173,7 +203,6 @@ public class MainActivity extends AppCompatActivity {
                 double amount = Double.parseDouble(input.getText().toString());
                 balance += amount;
                 updateBalanceUI();
-                Toast.makeText(this, "Προστέθηκαν " + amount + " Tokens!", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 Toast.makeText(this, "Άκυρο ποσό", Toast.LENGTH_SHORT).show();
             }
@@ -182,7 +211,7 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private void showPlayDialog(Game game, Button gameBtn) {
+    private void showPlayDialog(Game game) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Παιχνίδι: " + game.getGameName());
         builder.setMessage(String.format(Locale.US, "Όρια: %.2f - %.2f\nΥπόλοιπο: %.2f", 
@@ -225,7 +254,7 @@ public class MainActivity extends AppCompatActivity {
                                 .setPositiveButton("ΟΚ", (d, w) -> {
                                     // Έλεγχος αν ο παίκτης έχει ήδη βαθμολογήσει το παιχνίδι
                                     if (!game.hasVoted(username)) {
-                                        showRatingDialog(game, gameBtn);
+                                        showRatingDialog(game);
                                     }
                                 })
                                 .show();
@@ -246,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private void showRatingDialog(Game game, Button gameBtn) {
+    private void showRatingDialog(Game game) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Βαθμολόγησε το " + game.getGameName());
         final EditText input = new EditText(this);
@@ -261,15 +290,8 @@ public class MainActivity extends AppCompatActivity {
                     // Αποστολή στο backend
                     NetworkManager.rateGame(username, game.getGameName(), stars);
                     
-                    // Live ενημέρωση του τοπικού αντικειμένου Game
-                    game.addRating(username, stars);
-                    
-                    // Ενημέρωση του UI (κουμπί)
-                    String btnText = String.format("%s\nRisk: %s | Stars: %s", 
-                            game.getGameName(), game.getRiskLevel(), "⭐".repeat(Math.max(0, (int)game.getStars())));
-                    gameBtn.setText(btnText);
-
-                    Toast.makeText(this, "Ευχαριστούμε!", Toast.LENGTH_SHORT).show();
+                    // Ανανέωση ολόκληρης της λίστας αφού υπήρξε αλλαγή στη βαθμολογία
+                    refreshGamesList();
                 }
             } catch (Exception e) { /* ignore */ }
         });
