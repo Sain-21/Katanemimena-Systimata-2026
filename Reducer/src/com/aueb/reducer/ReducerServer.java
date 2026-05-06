@@ -53,7 +53,18 @@ public class ReducerServer
                     Map<String , Double> map = (Map<String , Double>) obj;
                     for (Map.Entry<String, Double> e : map.entrySet())
                     {
-                         mergedMap.merge(e.getKey(), e.getValue(), Double::sum);
+                        String key = e.getKey();
+                        double value = e.getValue();
+
+                        if(mergedMap.containsKey(key))
+                        {
+                            double old = mergedMap.get(key);
+                            mergedMap.put(key , old + value);
+                        }
+                        else
+                        {
+                            mergedMap.put(key , value);
+                        }
                     }
                 }
                  finalResult = mergedMap;

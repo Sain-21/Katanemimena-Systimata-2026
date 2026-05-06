@@ -215,7 +215,7 @@ class ClientHandler implements Runnable
                 }
                 System.out.println("[MASTER] Sending partial maps to Reducer...");
 
-                Object reducedStats = MasterServer.sendToReducer(partialMaps , "GET_PLAYERS_STATS_REQUEST_" + System.currentTimeMillis());
+                Object reducedStats = MasterServer.sendToReducer(partialMaps , "GET_PLAYER_STATS_REQUEST_" + System.currentTimeMillis());
                 if(reducedStats == null)
                 {
                     out.writeObject(new HashMap<String , Double>());

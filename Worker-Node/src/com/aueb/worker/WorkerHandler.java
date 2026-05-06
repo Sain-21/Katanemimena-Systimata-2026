@@ -240,7 +240,9 @@ public class WorkerHandler implements Runnable
         // update local worker map
         synchronized (WorkerServer.playerProfits) 
         {
-            WorkerServer.playerProfits.merge(playReq.getPlayerName(), playerNetResult, Double::sum);
+            String player = playReq.getPlayerName();
+            double old = WorkerServer.playerProfits.getOrDefault(player , 0.0);
+            WorkerServer.playerProfits.put(player , old + playerNetResult);
         }
         
         double providerNetResult = amount - payout;
