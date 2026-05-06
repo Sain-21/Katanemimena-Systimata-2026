@@ -70,7 +70,7 @@ java -cp "Lib*;Shared\src;Worker-Node\src" com.aueb.worker.WorkerServer 5003
 ### 🔹 Manager Console
 
 ```bash
-java -cp "Lib*;Shared\src;Manager-Console\src" com.aueb.manager.ManagerClient
+java -cp "Lib\*;Shared\src;Manager-Console\src" com.aueb.manager.ManagerClient
 ```
 
 ---
