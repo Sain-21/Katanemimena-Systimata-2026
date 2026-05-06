@@ -89,4 +89,22 @@ public class NetworkManager {
             }
         }).start();
     }
+
+    public static void rateGame(String username, String gameName, int stars) {
+        new Thread(() -> {
+            try (Socket socket = new Socket(HOST, PORT);
+                 ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
+
+                out.writeObject(new com.aueb.shared.RateRequest(gameName, username, stars));
+                out.flush();
+                // Λαμβάνουμε την απάντηση (το μήνυμα επιτυχίας/αποτυχίας του Master)
+                Object response = in.readObject();
+                Log.d("Rating", response.toString());
+
+            } catch (Exception e) {
+                Log.e("Rating", "Σφάλμα βαθμολογίας: " + e.getMessage());
+            }
+        }).start();
+    }
 }

@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnViewAll, btnAddBalance;
     private LinearLayout gamesContainer;
     private double balance = 0.0;
+    private String username = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
         btnViewAll = findViewById(R.id.btnViewAll);
         btnAddBalance = findViewById(R.id.btnAddBalance);
         gamesContainer = findViewById(R.id.gamesContainer);
+
+        showLoginDialog();
 
         // --- Λειτουργία 1: Προσθήκη Υπολοίπου (Tokens) ---
         btnAddBalance.setOnClickListener(v -> {
@@ -127,7 +130,14 @@ public class MainActivity extends AppCompatActivity {
                         tvBalance.setText("Balance: " + balance + " FUN");
 
                         // Δείχνουμε το αποτέλεσμα με ένα ωραίο Dialog αντί για Toast!
-                        showErrorDialog("Αποτέλεσμα", resultMessage);
+                        new android.app.AlertDialog.Builder(MainActivity.this)
+                                .setTitle("Αποτέλεσμα")
+                                .setMessage(resultMessage)
+                                .setPositiveButton("ΟΚ", (dialogMsg, whichMsg) -> {
+                                    dialogMsg.dismiss();
+                                    showRatingDialog(game); // Αμέσως μόλις κλείσει το αποτέλεσμα, ζητάμε βαθμολογία!
+                                })
+                                .show();
                     });
                 }
 
@@ -148,6 +158,37 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
+    private void showRatingDialog(Game game) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Βαθμολόγησε το " + game.getGameName());
+        builder.setMessage("Πόσα αστέρια του βάζεις (1-5);");
+
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setHint("1 έως 5");
+        builder.setView(input);
+
+        builder.setPositiveButton("Βαθμολογία", (dialog, which) -> {
+            String starsStr = input.getText().toString();
+            if (!starsStr.isEmpty()) {
+                try {
+                    int stars = Integer.parseInt(starsStr);
+                    if (stars >= 1 && stars <= 5) {
+                        NetworkManager.rateGame(username, game.getGameName(), stars);
+                        android.widget.Toast.makeText(this, "Η βαθμολογία σου καταχωρήθηκε!", android.widget.Toast.LENGTH_SHORT).show();
+                    } else {
+                        android.widget.Toast.makeText(this, "Παρακαλώ βάλε από 1 έως 5.", android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                } catch (NumberFormatException e) {
+                    // Αγνοούμε αν δεν έβαλε αριθμό
+                }
+            }
+        });
+
+        builder.setNegativeButton("Παράλειψη", (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+
     // --- Βοηθητική μέθοδος για να δείχνουμε όμορφα τα σφάλματα/αποτελέσματα ---
     private void showErrorDialog(String title, String message) {
         new AlertDialog.Builder(this)
@@ -155,5 +196,26 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(message)
                 .setPositiveButton("ΟΚ", (dialog, which) -> dialog.dismiss())
                 .show();
+    }
+
+    private void showLoginDialog() {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Καλώς ήρθες στο CasinoLalo!");
+        builder.setMessage("Εισάγετε το Username σας:");
+        builder.setCancelable(false); // Ο χρήστης δεν μπορεί να κάνει κλικ απ' έξω για να το κλείσει
+
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("π.χ. LaloPlayer");
+        builder.setView(input);
+
+        builder.setPositiveButton("Είσοδος", (dialog, which) -> {
+            username = input.getText().toString().trim();
+            if (username.isEmpty()) {
+                username = "Guest"; // Σε περίπτωση που δεν γράψει τίποτα
+            }
+            android.widget.Toast.makeText(this, "Καλή επιτυχία, " + username + "!", android.widget.Toast.LENGTH_SHORT).show();
+        });
+
+        builder.show();
     }
 }
