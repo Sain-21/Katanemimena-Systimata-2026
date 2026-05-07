@@ -71,13 +71,19 @@ public class ReducerServer
             }
             else
             {
-                List<Game> merged = new ArrayList<>();
+                // ΝΕΑ ΛΟΓΙΚΗ ΓΙΑ ΑΦΑΙΡΕΣΗ ΔΙΠΛΟΤΥΠΩΝ ΛΟΓΩ REPLICATION
+                HashMap<String, Game> uniqueGames = new HashMap<>();
+                
                 for(Object obj : partialResults)
                 {
                     List<Game> list = (List<Game>) obj;
-                    merged.addAll(list);
+                    for (Game g : list) 
+                    {
+                        // Το HashMap κρατάει μόνο ένα αντίγραφο για κάθε Όνομα Παιχνιδιού
+                        uniqueGames.put(g.getGameName(), g);
+                    }
                 }
-                finalResult = merged;
+                finalResult = new ArrayList<>(uniqueGames.values());
             }
             out.writeObject(finalResult);
             out.flush();

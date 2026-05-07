@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
-public class RandomGeneratorServer {
+public class RandomGeneratorServer 
+{
     private static final int PORT = 6000;
     //map pou krataei tin oura kai to secret gia kathe paixnidi
     private static HashMap<String , ArrayList<String[]>> queues = new HashMap<String , ArrayList<String[]>>();
@@ -71,8 +72,10 @@ public class RandomGeneratorServer {
                     }
 
                     //dimiourgia producer Thread gia auto to paixnidi
-                    Thread producer = new Thread(new Runnable() {
-                        public void run(){
+                    Thread producer = new Thread(new Runnable() 
+                    {
+                        public void run()
+                        {
                             Random r = new Random();
                             while(true)
                             {

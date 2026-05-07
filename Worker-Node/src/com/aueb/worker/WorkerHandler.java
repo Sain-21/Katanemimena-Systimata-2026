@@ -158,6 +158,53 @@ public class WorkerHandler implements Runnable
                     oos.writeObject(new HashMap<>(WorkerServer.providerProfits));
                 }
             }
+
+            // Sync από τον Master για το Replication
+            else if (received instanceof SyncRequest) 
+            {
+                SyncRequest sync = (SyncRequest) received;
+                Game game;
+                synchronized (gameList) 
+                {
+                    game = gameList.get(sync.getGameName());
+                }
+
+                if (game != null) 
+                {
+                    if ("PLAY".equals(sync.getType())) 
+                    {
+                        // Συγχρονισμός χρημάτων
+                        synchronized (game) 
+                        {
+                            game.addPlay(sync.getBetAmount(), sync.getPayout());
+                        }
+
+                        double playerNetResult = sync.getPayout() - sync.getBetAmount();
+                        double providerNetResult = sync.getBetAmount() - sync.getPayout();
+
+                        synchronized (WorkerServer.playerProfits) 
+                        {
+                            WorkerServer.playerProfits.put(sync.getPlayerName(), 
+                                WorkerServer.playerProfits.getOrDefault(sync.getPlayerName(), 0.0) + playerNetResult);
+                        }
+                        synchronized(WorkerServer.providerProfits)
+                        {
+                            WorkerServer.providerProfits.merge(game.getProviderName(), providerNetResult, Double::sum);
+                        }
+                        System.out.println("[WORKER BACKUP] Synced PLAY for game: " + sync.getGameName());
+                    } 
+                    else if ("RATE".equals(sync.getType())) 
+                    {
+                        // Συγχρονισμός αστεριών
+                        synchronized (game) 
+                        {
+                            game.addRating(sync.getPlayerName(), sync.getStars());
+                        }
+                        System.out.println("[WORKER BACKUP] Synced RATING for game: " + sync.getGameName());
+                    }
+                }
+                oos.writeObject("Synced Successfully");
+            }
             oos.flush();
         } 
         catch (Exception e) 

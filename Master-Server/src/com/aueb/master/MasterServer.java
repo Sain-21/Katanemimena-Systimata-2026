@@ -5,6 +5,7 @@ import java.io.*;
 import java.net.*;
 
 import com.aueb.shared.SearchRequest;
+import com.aueb.shared.SyncRequest;
 import com.aueb.shared.Game;
 import com.aueb.shared.ListGamesRequest;
 import com.aueb.shared.PlayRequest;
@@ -99,13 +100,16 @@ class ClientHandler implements Runnable
                 {
                     System.err.println("[MASTER] : SRG communication error: " + e.getMessage());
                 }
-                int nodeId = Math.abs(game.getGameName().hashCode()) % workerPorts.length;
-                int targetPort = workerPorts[nodeId];
 
-                // proothisi ston worker
-                forwardToWorker(targetPort, game, null);
-                System.out.println("[MASTER] : Game " + game.getGameName() + " sent to Worker on port " + targetPort);
-                out.writeObject("Game " + game.getGameName() + " received and forwarded.");
+                // ΛΟΓΙΚΗ REPLICATION: Στέλνουμε το παιχνίδι και στους δύο!
+                int primaryId = Math.abs(game.getGameName().hashCode()) % workerPorts.length;
+                int backupId = (primaryId + 1) % workerPorts.length;
+
+                forwardToWorker(workerPorts[primaryId], game, null);
+                forwardToWorker(workerPorts[backupId], game, null);
+                
+                System.out.println("[MASTER] : Game " + game.getGameName() + " replicated to ports " + workerPorts[primaryId] + " & " + workerPorts[backupId]);
+                out.writeObject("Game " + game.getGameName() + " received and replicated.");
                 out.flush();
             }
 
@@ -178,23 +182,61 @@ class ClientHandler implements Runnable
             }
 
             //bet
+            //bet
             else if (received instanceof PlayRequest)
             {
                 PlayRequest req = (PlayRequest) received;
-                int nodeId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
+                int primaryId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
+                int backupId = (primaryId + 1) % workerPorts.length;
                 
-                Object response = forwardToWorker(workerPorts[nodeId], req, null);
+                int primaryPort = workerPorts[primaryId];
+                int backupPort = workerPorts[backupId];
+
+                // Στέλνουμε αρχικά στον Primary. Αν επιστρέψει το default "FAIL", πάει να πει πως έπεσε.
+                Object response = forwardToWorker(primaryPort, req, "FAIL");
+                
+                if ("FAIL".equals(response)) 
+                {
+                    System.out.println("[MASTER FAILOVER] : Primary " + primaryPort + " is down! Routing PlayRequest to replica " + backupPort);
+                    response = forwardToWorker(backupPort, req, "FAIL");
+                } 
+                else 
+                {
+                    // Αν ο Primary πέτυχε το Play, πρέπει να συγχρονίσουμε αθόρυβα τον Backup!
+                    if (response instanceof Double) 
+                    {
+                        double payout = (Double) response;
+                        SyncRequest syncReq = new SyncRequest("PLAY", req.getGameName(), req.getPlayerName(), req.getBetAmount(), payout);
+                        forwardToWorker(backupPort, syncReq, null);
+                    }
+                }
                 
                 out.writeObject(response);
                 out.flush();
             }
+            
             else if(received instanceof RateRequest)
             {
                 RateRequest rr = (RateRequest) received;
                 System.out.println("[MASTER] : Received rating for " + rr.getGameName());
 
-                int nodeId = Math.abs(rr.getGameName().hashCode()) % workerPorts.length;
-                Object response = forwardToWorker(workerPorts[nodeId], rr, "Error communicating with worker");
+                int primaryId = Math.abs(rr.getGameName().hashCode()) % workerPorts.length;
+                int backupId = (primaryId + 1) % workerPorts.length;
+
+                Object response = forwardToWorker(workerPorts[primaryId], rr, "FAIL");
+
+                if ("FAIL".equals(response)) 
+                {
+                    System.out.println("[MASTER FAILOVER] : Primary is down! Routing RateRequest to replica.");
+                    response = forwardToWorker(workerPorts[backupId], rr, "Error communicating with worker");
+                }
+                else
+                {
+                    // Συγχρονίζουμε τα αστέρια στον Backup
+                    SyncRequest syncReq = new SyncRequest("RATE", rr.getGameName(), rr.getPlayerName(), rr.getStars());
+                    forwardToWorker(workerPorts[backupId], syncReq, null);
+                }
+                
                 out.writeObject(response);
                 out.flush();
             }

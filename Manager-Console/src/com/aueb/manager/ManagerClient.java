@@ -133,8 +133,11 @@ public class ManagerClient
             return;
         }
 
-        //adding default secret
-        Game newGame = new Game(name, provider, stars, 0, null, minBet, maxBet, risk, "LaloFroutaSecret");
+        String defaultSecret = name.replaceAll("\\s+", "") + "Secret";
+        String hashKey = promptString("Secret Hash Key", defaultSecret);
+
+        // Φτιάχνουμε το παιχνίδι περνώντας τη νέα μεταβλητή hashKey αντί για το καρφωτό κείμενο
+        Game newGame = new Game(name, provider, stars, 0, null, minBet, maxBet, risk, hashKey);
         
         //local save
         existingGames.add(newGame);

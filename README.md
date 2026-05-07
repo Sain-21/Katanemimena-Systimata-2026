@@ -17,8 +17,8 @@ cd path\to\Katanemimena-Systimata-2026
 Τρέξε τις παρακάτω εντολές:
 
 ```bash
-dir /s /B *.java > sources.txt
-javac -cp "Lib*;Shared\src" @sources.txt
+dir /s /B *.java | findstr /V "CasinoLalo" > sources.txt
+javac -cp "Lib\*;Shared\src" @sources.txt
 ```
 
 ---

@@ -1,27 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Game screen -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
     android:background="@color/dark_bg">
-
-    <!-- Header with Balance -->
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp">
-
-        <TextView
-            android:id="@+id/tvDetailBalance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Credits: 0.00"
-            android:textColor="@color/casino_gold"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_alignParentEnd="true"/>
-    </RelativeLayout>
 
     <ScrollView
         android:layout_width="match_parent"
@@ -34,16 +18,35 @@
             android:orientation="vertical"
             android:gravity="center_horizontal">
 
+            <!-- balance -->
+            <TextView
+                android:id="@+id/tvDetailBalance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Credits: 0.00"
+                android:textColor="@color/casino_gold"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Game image -->
             <ImageView
                 android:id="@+id/ivGameDetailIcon"
-                android:layout_width="140dp"
-                android:layout_height="140dp"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:src="@drawable/ic_launcher_foreground"
                 android:scaleType="centerInside"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="8dp"
                 android:contentDescription="Game Icon"/>
 
+            <com.example.casinolalo.ui.DiceSliderView
+                android:id="@+id/diceSlider"
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Game name -->
             <TextView
                 android:id="@+id/tvGameDetailName"
                 android:layout_width="wrap_content"
@@ -54,15 +57,17 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="2dp"/>
 
+            <!--stats -->
             <TextView
                 android:id="@+id/tvGameDetailStats"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Risk: High | ⭐⭐⭐⭐⭐"
+                android:text="Risk: High | Rating: ⭐⭐⭐⭐⭐"
                 android:textColor="@color/casino_gold"
                 android:textSize="14sp"
                 android:layout_marginBottom="12dp"/>
 
+            <!-- limits -->
             <TextView
                 android:id="@+id/tvGameDetailLimits"
                 android:layout_width="wrap_content"
@@ -72,19 +77,40 @@
                 android:textSize="12sp"
                 android:layout_marginBottom="8dp"/>
 
-            <EditText
-                android:id="@+id/etBetAmount"
-                android:layout_width="160dp"
+            <!-- bet -->
+            <LinearLayout
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:hint="Bet Amount"
-                android:inputType="numberDecimal"
-                android:textColor="@color/white"
-                android:textColorHint="@color/text_secondary"
-                android:backgroundTint="@color/casino_gold"
-                android:gravity="center"
-                android:padding="10dp"
-                android:layout_marginBottom="12dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
 
+                <EditText
+                    android:id="@+id/etBetAmount"
+                    android:layout_width="140dp"
+                    android:layout_height="wrap_content"
+                    android:hint="Bet Amount"
+                    android:inputType="numberDecimal"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/text_secondary"
+                    android:backgroundTint="@color/casino_gold"
+                    android:gravity="center"
+                    android:padding="10dp" />
+
+                <Button
+                    android:id="@+id/btnDoubleBet"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2x"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:layout_marginStart="8dp"
+                    android:backgroundTint="@color/dark_card"
+                    android:textColor="@color/casino_gold"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- play button -->
             <Button
                 android:id="@+id/btnPlayAction"
                 android:layout_width="match_parent"
@@ -97,7 +123,7 @@
                 android:padding="12dp"
                 android:layout_marginBottom="12dp"/>
 
-            <!-- Auto Play Switch -->
+            <!-- autoplay -->
             <CheckBox
                 android:id="@+id/cbAutoPlay"
                 android:layout_width="wrap_content"
@@ -107,7 +133,7 @@
                 android:buttonTint="@color/casino_gold"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- History Section -->
+            <!-- history -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -117,7 +143,7 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
 
-            <!-- Scrollable History -->
+            <!-- history container -->
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
@@ -133,6 +159,7 @@
 
             </ScrollView>
 
+            <!-- rate -->
             <Button
                 android:id="@+id/btnRateGame"
                 android:layout_width="wrap_content"
@@ -146,6 +173,7 @@
         </LinearLayout>
     </ScrollView>
 
+    <!-- exit -->
     <Button
         android:id="@+id/btnBackToGames"
         android:layout_width="match_parent"
