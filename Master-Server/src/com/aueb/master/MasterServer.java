@@ -16,6 +16,9 @@ public class MasterServer
 {
     private static final int PORT = 1312;
     private static final int REDUCER_PORT = 7000;
+    private static final String REDUCER_HOST = "Ip tou upologisti pou trexei reducer";
+    private static final String SRG_HOST = "IP tou upologisti pou trexei ton srg";
+    private static final int SRG_PORT = 6000;
     
 
     public static void main(String[] args) 
@@ -44,7 +47,7 @@ public class MasterServer
     public static Object sendToReducer(Object data , String requestId)
     {
         try(
-            Socket rs = new Socket("localhost", REDUCER_PORT);
+            Socket rs = new Socket(REDUCER_HOST, REDUCER_PORT);
             ObjectOutputStream out = new ObjectOutputStream(rs.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(rs.getInputStream());
         )
@@ -65,7 +68,11 @@ public class MasterServer
 class ClientHandler implements Runnable 
 {
     private Socket socket;
-    private static final int[] workerPorts = {5001, 5002};
+    //private static final int[] workerPorts = {5001, 5002};
+    private static final String[] workerHosts = {"PC1_IP", "PC2_IP", "PC3_IP"}; // Βάλε σωστές IP
+    private static final int[] workerPorts = {5001, 5002, 5003};
+    private static final String SRG_HOST = "IP tou upologisti pou trexei ton srg";
+    private static final int SRG_PORT = 6000;
 
     public ClientHandler(Socket socket) 
     {
@@ -86,9 +93,9 @@ class ClientHandler implements Runnable
                 Game game = (Game) received;
                 System.out.println("[MASTER] : Received game: " + game.getGameName());
                 
-                try(Socket srgSocket = new Socket("localhost", 6000);
+                try(Socket srgSocket = new Socket(SRG_HOST , SRG_PORT);
                     ObjectOutputStream srgOut = new ObjectOutputStream(srgSocket.getOutputStream());
-                     ObjectInputStream srgIn = new ObjectInputStream(srgSocket.getInputStream()))
+                    ObjectInputStream srgIn = new ObjectInputStream(srgSocket.getInputStream()))
                 {
                     srgOut.writeObject(new String[]{"ADD_GAME", game.getGameName(), game.getHashKey()});
                     srgOut.flush();
@@ -102,14 +109,21 @@ class ClientHandler implements Runnable
                 }
 
                 // ΛΟΓΙΚΗ REPLICATION: Στέλνουμε το παιχνίδι και στους δύο!
-                int primaryId = Math.abs(game.getGameName().hashCode()) % workerPorts.length;
-                int backupId = (primaryId + 1) % workerPorts.length;
+                //int primaryId = Math.abs(game.getGameName().hashCode()) % workerPorts.length;
+                //int backupId = (primaryId + 1) % workerPorts.length;
+//
+                //forwardToWorker(workerPorts[primaryId], game, null);
+                //forwardToWorker(workerPorts[backupId], game, null);
 
-                forwardToWorker(workerPorts[primaryId], game, null);
-                forwardToWorker(workerPorts[backupId], game, null);
+                int primaryId = Math.abs(game.getGameName().hashCode()) % workerPorts.length;
+                int backup1Id = (primaryId + 1) % workerPorts.length;
+                int backup2Id = (primaryId + 2) % workerPorts.length;
+
+                forwardToWorker(primaryId, game, null);
+                forwardToWorker(backup1Id, game, null);
+                forwardToWorker(backup2Id, game, null);
                 
-                System.out.println("[MASTER] : Game " + game.getGameName() + " replicated to ports " + workerPorts[primaryId] + " & " + workerPorts[backupId]);
-                out.writeObject("Game " + game.getGameName() + " received and replicated.");
+                System.out.println("[MASTER] : Game " + game.getGameName() + " replicated to nodes " + primaryId + ", " + backup1Id + ", " + backup2Id);                out.writeObject("Game " + game.getGameName() + " received and replicated.");
                 out.flush();
             }
 
@@ -183,32 +197,72 @@ class ClientHandler implements Runnable
 
             //bet
             //bet
+            //else if (received instanceof PlayRequest)
+            //{
+            //    PlayRequest req = (PlayRequest) received;
+            //    int primaryId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
+            //    int backupId = (primaryId + 1) % workerPorts.length;
+            //    
+            //    int primaryPort = workerPorts[primaryId];
+            //    int backupPort = workerPorts[backupId];
+//
+            //    // Στέλνουμε αρχικά στον Primary. Αν επιστρέψει το default "FAIL", πάει να πει πως έπεσε.
+            //    Object response = forwardToWorker(primaryPort, req, "FAIL");
+            //    
+            //    if ("FAIL".equals(response)) 
+            //    {
+            //        System.out.println("[MASTER FAILOVER] : Primary " + primaryPort + " is down! Routing PlayRequest to replica " + backupPort);
+            //        response = forwardToWorker(backupPort, req, "FAIL");
+            //    } 
+            //    else 
+            //    {
+            //        // Αν ο Primary πέτυχε το Play, πρέπει να συγχρονίσουμε αθόρυβα τον Backup!
+            //        if (response instanceof Double) 
+            //        {
+            //            double payout = (Double) response;
+            //            SyncRequest syncReq = new SyncRequest("PLAY", req.getGameName(), req.getPlayerName(), req.getBetAmount(), payout);
+            //            forwardToWorker(backupPort, syncReq, null);
+            //        }
+            //    }
+            //    
+            //    out.writeObject(response);
+            //    out.flush();
+            //}
+
             else if (received instanceof PlayRequest)
             {
                 PlayRequest req = (PlayRequest) received;
                 int primaryId = Math.abs(req.getGameName().hashCode()) % workerPorts.length;
-                int backupId = (primaryId + 1) % workerPorts.length;
-                
-                int primaryPort = workerPorts[primaryId];
-                int backupPort = workerPorts[backupId];
+                int backup1Id = (primaryId + 1) % workerPorts.length;
+                int backup2Id = (primaryId + 2) % workerPorts.length;
 
-                // Στέλνουμε αρχικά στον Primary. Αν επιστρέψει το default "FAIL", πάει να πει πως έπεσε.
-                Object response = forwardToWorker(primaryPort, req, "FAIL");
+                // Δοκιμάζουμε τον Primary
+                Object response = forwardToWorker(primaryId, req, "FAIL");
+                int successfulNode = primaryId;
                 
                 if ("FAIL".equals(response)) 
                 {
-                    System.out.println("[MASTER FAILOVER] : Primary " + primaryPort + " is down! Routing PlayRequest to replica " + backupPort);
-                    response = forwardToWorker(backupPort, req, "FAIL");
-                } 
-                else 
-                {
-                    // Αν ο Primary πέτυχε το Play, πρέπει να συγχρονίσουμε αθόρυβα τον Backup!
-                    if (response instanceof Double) 
+                    System.out.println("[MASTER FAILOVER] : Primary " + primaryId + " is down! Routing PlayRequest to Backup 1 (" + backup1Id + ")");
+                    response = forwardToWorker(backup1Id, req, "FAIL");
+                    successfulNode = backup1Id;
+                    
+                    if ("FAIL".equals(response)) 
                     {
-                        double payout = (Double) response;
-                        SyncRequest syncReq = new SyncRequest("PLAY", req.getGameName(), req.getPlayerName(), req.getBetAmount(), payout);
-                        forwardToWorker(backupPort, syncReq, null);
+                        System.out.println("[MASTER FAILOVER] : Backup 1 is down! Routing PlayRequest to Backup 2 (" + backup2Id + ")");
+                        response = forwardToWorker(backup2Id, req, "FAIL");
+                        successfulNode = backup2Id;
                     }
+                } 
+
+                // Αν κάποιος από τους 3 τα κατάφερε, συγχρονίζουμε τους υπόλοιπους
+                if (!"FAIL".equals(response) && response instanceof Double) 
+                {
+                    double payout = (Double) response;
+                    SyncRequest syncReq = new SyncRequest("PLAY", req.getGameName(), req.getPlayerName(), req.getBetAmount(), payout);
+                    
+                    if (successfulNode != primaryId) forwardToWorker(primaryId, syncReq, null);
+                    if (successfulNode != backup1Id) forwardToWorker(backup1Id, syncReq, null);
+                    if (successfulNode != backup2Id) forwardToWorker(backup2Id, syncReq, null);
                 }
                 
                 out.writeObject(response);
@@ -294,7 +348,7 @@ class ClientHandler implements Runnable
     //helper func for communication with workers
     private Object forwardToWorker(int port, Object request, Object defaultValue) 
     {
-        try (Socket workerSocket = new Socket("localhost", port);
+        try (Socket workerSocket = new Socket(workerHosts[port] , workerPorts[port]);
              ObjectOutputStream oos = new ObjectOutputStream(workerSocket.getOutputStream());
              ObjectInputStream ois = new ObjectInputStream(workerSocket.getInputStream())) 
              {
@@ -305,7 +359,7 @@ class ClientHandler implements Runnable
         }
         catch (Exception e) 
         {
-            System.err.println("[MASTER] Worker at " + port + " error: " + e.getMessage());
+            System.err.println("[MASTER] Worker at " + workerHosts[port] + ":" + workerPorts[port] + " error: " + e.getMessage());
             return defaultValue;
         }
     }

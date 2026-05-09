@@ -11,6 +11,8 @@ public class WorkerHandler implements Runnable
 {
     private Socket socket;
     private HashMap<String, Game> gameList;
+    private static final String SRG_HOST = "IP tou upologisti pou trexei srg";
+    private static final int SRG_PORT = 6000;
 
     public WorkerHandler(Socket socket, HashMap<String, Game> gameList) 
     {
@@ -236,7 +238,7 @@ public class WorkerHandler implements Runnable
         }
 
         String[] srgData = null;
-        try (Socket srgSocket = new Socket("localhost", 6000);
+        try (Socket srgSocket = new Socket(SRG_HOST , SRG_PORT);
             ObjectOutputStream srgOut = new ObjectOutputStream(srgSocket.getOutputStream());
             ObjectInputStream srgIn = new ObjectInputStream(srgSocket.getInputStream()))
         {

@@ -37,5 +37,16 @@
             android:textStyle="bold"
             android:gravity="center"/>
 
+        <!-- Details: Risk & Rating -->
+        <TextView
+            android:id="@+id/gameInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Risk | Stars"
+            android:textColor="@color/casino_gold"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:layout_marginTop="2dp"/>
+
     </LinearLayout>
 </androidx.cardview.widget.CardView>

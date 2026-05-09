@@ -10,9 +10,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ManagerClient 
 {
+    //private static final String FILE_PATH = "Resources\\game.json";
+    //private static final String HOST = "localhost";
+    //private static final int PORT = 1312;
+
     private static final String FILE_PATH = "Resources\\game.json";
-    private static final String HOST = "localhost";
+    private static final String HOST = "IP_TOU_MASTER_EDW"; 
     private static final int PORT = 1312;
+
     private static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) 
@@ -392,7 +397,7 @@ public class ManagerClient
 
     private static void removeGameOnMaster(String gameName)
     {
-        try(Socket socket = new Socket("localhost", 1312);
+        try(Socket socket = new Socket(HOST, 1312);
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream()))
         {

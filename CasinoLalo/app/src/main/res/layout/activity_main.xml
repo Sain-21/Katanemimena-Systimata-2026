@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/main"
     android:layout_width="match_parent"
@@ -13,7 +12,7 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="12dp">
 
         <TextView
             android:id="@+id/tvWelcomeUser"
@@ -36,19 +35,64 @@
             android:layout_alignParentEnd="true"/>
     </RelativeLayout>
 
+    <!-- Section Φίλτρων -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/dark_card"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp">
+
+        <!-- Search Bar -->
+        <EditText
+            android:id="@+id/etSearchGames"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search game name..."
+            android:textColor="@color/white"
+            android:textColorHint="@color/text_secondary"
+            android:textSize="14sp"
+            android:backgroundTint="@color/casino_gold"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Risk Filter Spinner -->
+            <Spinner
+                android:id="@+id/spinnerRiskFilter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="@color/casino_gold" />
+
+            <!-- Rating Filter Spinner -->
+            <Spinner
+                android:id="@+id/spinnerRatingFilter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="@color/casino_gold" />
+        </LinearLayout>
+    </LinearLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="SELECT A GAME"
         android:textColor="@color/text_secondary"
-        android:textSize="18sp"
+        android:textSize="14sp"
         android:textStyle="bold"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginBottom="8dp"/>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:fillViewport="true"> <!-- Εξασφαλίζει ότι το περιεχόμενο γεμίζει το χώρο -->
 
         <!-- grid -->
         <GridLayout
@@ -56,9 +100,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:columnCount="2"
-            android:alignmentMode="alignMargins"
-            android:columnOrderPreserved="false"
-            android:padding="4dp" />
+            android:padding="8dp"
+            android:useDefaultMargins="true" /> <!-- Πιο απλό και σταθερό Grid -->
 
     </ScrollView>
 
