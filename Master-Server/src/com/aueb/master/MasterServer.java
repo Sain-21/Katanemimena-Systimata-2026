@@ -16,8 +16,8 @@ public class MasterServer
 {
     private static final int PORT = 1312;
     private static final int REDUCER_PORT = 7000;
-    private static final String REDUCER_HOST = "Ip tou upologisti pou trexei reducer";
-    private static final String SRG_HOST = "IP tou upologisti pou trexei ton srg";
+    private static final String REDUCER_HOST = "192.168.1.29";
+    private static final String SRG_HOST = "192.168.1.29";
     private static final int SRG_PORT = 6000;
     
 
@@ -69,9 +69,9 @@ class ClientHandler implements Runnable
 {
     private Socket socket;
     //private static final int[] workerPorts = {5001, 5002};
-    private static final String[] workerHosts = {"PC1_IP", "PC2_IP", "PC3_IP"}; // Βάλε σωστές IP
+    private static final String[] workerHosts = {"192.168.1.6", "192.168.1.29", "192.168.1.108"}; // Βάλε σωστές IP
     private static final int[] workerPorts = {5001, 5002, 5003};
-    private static final String SRG_HOST = "IP tou upologisti pou trexei ton srg";
+    private static final String SRG_HOST = "192.168.1.29";
     private static final int SRG_PORT = 6000;
 
     public ClientHandler(Socket socket) 
@@ -133,9 +133,9 @@ class ClientHandler implements Runnable
                 SearchRequest req = (SearchRequest) received;
                 List<Object> partialResults = new ArrayList<>();
             
-                for (int port : workerPorts) 
+                for (int i = 0; i < workerPorts.length; i++) 
                 {
-                    Object response = forwardToWorker(port, req, null);
+                    Object response = forwardToWorker(i, req, null);
                     partialResults.add(response);
                 }
 
@@ -166,9 +166,9 @@ class ClientHandler implements Runnable
                 RemoveGameRequest req = (RemoveGameRequest) received;
                 boolean removed = false;
 
-                for(int port : workerPorts)
+                for (int i = 0; i < workerPorts.length; i++)
                 {
-                    Object response = forwardToWorker(port, req, null);
+                    Object response = forwardToWorker(i, req, null);
                     if("Game Removed!".equals(response))
                     {
                         removed = true;
@@ -182,9 +182,9 @@ class ClientHandler implements Runnable
             else if (received instanceof ListGamesRequest)
             {
                 List<List<Game>> allWorkerLists = new ArrayList<>();
-                for (int port : workerPorts)
+                for (int i = 0; i < workerPorts.length; i++)
                 {
-                    Object resp = forwardToWorker(port, received, null);
+                    Object resp = forwardToWorker(i, received, null);
                     if (resp instanceof List)
                     {
                         allWorkerLists.add((List<Game>) resp);
@@ -277,18 +277,16 @@ class ClientHandler implements Runnable
                 int primaryId = Math.abs(rr.getGameName().hashCode()) % workerPorts.length;
                 int backupId = (primaryId + 1) % workerPorts.length;
 
-                Object response = forwardToWorker(workerPorts[primaryId], rr, "FAIL");
-
+                Object response = forwardToWorker(primaryId, rr, "FAIL");
                 if ("FAIL".equals(response)) 
                 {
                     System.out.println("[MASTER FAILOVER] : Primary is down! Routing RateRequest to replica.");
-                    response = forwardToWorker(workerPorts[backupId], rr, "Error communicating with worker");
+                    response = forwardToWorker(backupId, rr, "Error communicating with worker");
                 }
                 else
                 {
-                    // Συγχρονίζουμε τα αστέρια στον Backup
                     SyncRequest syncReq = new SyncRequest("RATE", rr.getGameName(), rr.getPlayerName(), rr.getStars());
-                    forwardToWorker(workerPorts[backupId], syncReq, null);
+                    forwardToWorker(backupId, syncReq, null);
                 }
                 
                 out.writeObject(response);
@@ -301,9 +299,9 @@ class ClientHandler implements Runnable
                 System.out.println("[MASTER] : Getting player stats from all workers...");
                 List<Map<String, Double>> partialMaps = new ArrayList<>();
 
-                for (int port : workerPorts)
+                for (int i = 0; i < workerPorts.length; i++)
                 {
-                    Object response = forwardToWorker(port, "GET_PLAYER_STATS", null);
+                    Object response = forwardToWorker(i, "GET_PLAYER_STATS", null);
                     if (response instanceof Map)
                     {
                         partialMaps.add((Map<String, Double>) response);
@@ -326,9 +324,9 @@ class ClientHandler implements Runnable
             {
                 System.out.println("[MASTER] : Getting provider stats from all workers...");
                 List<Map<String, Double>> partialMaps = new ArrayList<>();
-                for (int port : workerPorts)
+                for (int i = 0; i < workerPorts.length; i++)
                 {
-                    Object response = forwardToWorker(port, "GET_PROVIDER_STATS", null);
+                    Object response = forwardToWorker(i, "GET_PROVIDER_STATS", null);
                     if (response instanceof Map)
                     {
                         partialMaps.add((Map<String, Double>) response);

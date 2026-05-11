@@ -157,7 +157,13 @@ public class MainActivity extends AppCompatActivity {
                 allGames = games;
                 runOnUiThread(() -> applyFilters());
             }
-            @Override public void onError(String errorMsg) {}
+            @Override 
+            public void onError(String errorMsg) {
+                android.util.Log.e("NetworkError", "Failed to fetch games: " + errorMsg);
+                runOnUiThread(() -> {
+                    android.widget.Toast.makeText(MainActivity.this, "Connection Error: " + errorMsg, android.widget.Toast.LENGTH_LONG).show();
+                });
+            }
         });
     }
 

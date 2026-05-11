@@ -11,7 +11,7 @@ public class WorkerHandler implements Runnable
 {
     private Socket socket;
     private HashMap<String, Game> gameList;
-    private static final String SRG_HOST = "IP tou upologisti pou trexei srg";
+    private static final String SRG_HOST = "192.168.1.29";
     private static final int SRG_PORT = 6000;
 
     public WorkerHandler(Socket socket, HashMap<String, Game> gameList) 

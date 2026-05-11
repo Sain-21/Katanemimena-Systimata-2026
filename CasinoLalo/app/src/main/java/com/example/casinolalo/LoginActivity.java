@@ -25,7 +25,7 @@ public class LoginActivity extends AppCompatActivity
         btnLogin.setOnClickListener(v ->
         {
             String username = etUsername.getText().toString().trim();
-            
+
             //check if text is empty
             if (username.isEmpty())
             {

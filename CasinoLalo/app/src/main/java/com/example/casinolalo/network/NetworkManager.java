@@ -12,8 +12,8 @@ import java.util.List;
 
 public class NetworkManager
 {
-    //local host of pc in emulator
-    private static final String HOST = "10.0.2.2";
+    //private static final String HOST = "10.0.2.2";
+    private static final String HOST = "192.168.1.108";
     private static final int PORT = 1312;
 
     public interface GameListCallback
@@ -24,6 +24,7 @@ public class NetworkManager
 
     public static void fetchAllGames(GameListCallback callback)
     {
+        Log.d("NetworkManager", "Attempting to fetch games from " + HOST + ":" + PORT);
         new Thread(() ->
         {
             try (Socket socket = new Socket(HOST, PORT);

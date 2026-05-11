@@ -15,7 +15,7 @@ public class ManagerClient
     //private static final int PORT = 1312;
 
     private static final String FILE_PATH = "Resources\\game.json";
-    private static final String HOST = "IP_TOU_MASTER_EDW"; 
+    private static final String HOST = "192.168.1.108"; 
     private static final int PORT = 1312;
 
     private static final Scanner sc = new Scanner(System.in);
